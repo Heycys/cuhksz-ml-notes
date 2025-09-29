@@ -1,0 +1,462 @@
+/* 全局样式重置 */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
+  line-height: 1.6;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 应用布局 */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  --sidebar-width: 280px;
+}
+
+/* 可调整大小的侧栏容器 */
+.resizable-sidebar-container {
+  display: flex;
+  height: 100vh;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* 确保resize-handle在正确的层级 */
+.resizable-sidebar-container:not(.collapsed) {
+  padding-right: 0; /* 确保有空间给resize-handle */
+}
+
+/* ---------- 裁剪层 ---------- */
+.sidebar-clipper {
+  position: absolute;          /* 占据容器左侧 */
+  top: 0; 
+  bottom: 0; 
+  left: 0;
+  overflow: hidden;            /* 负责裁剪上下边界 */
+  width: var(--sidebar-width, 280px);
+  display: flex;               /* 让 inner 撑满 */
+  transition: top 0.3s ease, bottom 0.3s ease, width 0.2s ease;
+}
+
+/* ---------- 真正的侧栏 ---------- */
+.sidebar-inner {
+  flex: 1 0 100%;
+  background: #F9F8F7;
+  display: flex; 
+  flex-direction: column;
+  height: 100%;  /* 改为100%，跟随父容器高度 */
+  border-right: 2px solid #F0EFEE;  /* 侧栏右侧分界线：2px粗细，浅灰色 */
+  position: relative;
+  z-index: 1000;
+  transition: transform 0.3s ease, opacity 0.2s ease;
+}
+
+/* ---------- 遮挡片，盖住圆角 & 投影 ---------- */
+.sidebar-cap {
+  position: absolute; 
+  left: 0; 
+  right: 0;
+  height: 15px; 
+  background: #F9F8F7; 
+  pointer-events: none;
+}
+.sidebar-cap.top { top: -15px; }
+.sidebar-cap.bottom { bottom: -15px; }
+
+/* ---------- 折叠 / 展开动画：顶、底往里收 ---------- */
+.resizable-sidebar-container.animating .sidebar-clipper,
+.resizable-sidebar-container.expanding .sidebar-clipper {  /* 阴影 + 圆角 */
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  border-radius: 0 12px 12px 0;
+}
+
+.resizable-sidebar-container.animating.in-animation .sidebar-clipper,
+.resizable-sidebar-container.expanding.in-expansion .sidebar-clipper {
+  top: 10vh;               /* "往中间收" 的关键：裁剪层上下各缩 10vh */
+  bottom: 10vh;
+}
+
+.resizable-sidebar-container.expanding.in-expansion .sidebar-clipper {
+  top: 0; 
+  bottom: 0;        /* 动画结束复位 */
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* ---------- 折叠完成后的浮动状态 ---------- */
+.sidebar-clipper.floating {
+  position: fixed !important;
+  left: 0; 
+  top: 10vh; 
+  bottom: 10vh;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  border-radius: 0 12px 12px 0;
+  z-index: 1001;
+  transition: transform 0.3s ease;
+}
+
+/* ---------- X 方向位移 ---------- */
+.sidebar-clipper.collapsed { 
+  transform: translateX(-100%); 
+}           
+.sidebar-clipper.peek { 
+  transform: translateX(calc(-100% + 59px)); 
+}
+.sidebar-clipper.visible { 
+  transform: none; 
+}
+
+/* 确保内层侧栏在正常状态下不做X向变换 */
+.sidebar-inner {
+  transform: none;
+}
+
+/* 拖拽调整大小的把手 */
+.resize-handle {
+  width: 0;
+  cursor: col-resize;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 280px; /* 默认位置，会被JavaScript动态更新 */
+  flex-shrink: 0;
+  z-index: 1002; /* 确保在侧栏上方 */
+}
+
+.resize-handle:hover::after,
+.resize-handle.resizing::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -1.5px;
+  bottom: 0;
+  width: 3px;
+  background-color: #DFDEDD;
+  pointer-events: none;
+}
+
+/* 鼠标悬停时的扩展点击区域 */
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -5px;
+  right: -5px;
+  bottom: 0;
+  cursor: col-resize;
+}
+
+/* 拖拽时的视觉反馈 */
+.resize-handle.resizing::after {
+  box-shadow: 0 0 4px rgba(223, 222, 221, 0.5);
+}
+
+/* 防止在拖拽时选择文本 */
+.resizable-sidebar-container.resizing {
+  user-select: none;
+}
+
+/* 拖拽时禁用所有过渡动画，确保边界同步移动 */
+.resizable-sidebar-container.resizing .sidebar-clipper,
+.resizable-sidebar-container.resizing .sidebar-inner,
+.resizable-sidebar-container.resizing .resize-handle::after {
+  transition: none !important;
+}
+
+/* 侧栏样式 */
+.sidebar {
+  width: 100%;
+  background-color: #F9F8F7;
+  display: flex;
+  flex-direction: column;
+  height: 100%;  /* 改为100%，跟随父容器高度 */
+  position: relative;
+}
+
+.sidebar.collapsed {
+  min-width: 60px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 2px solid #F0EFEE;  /* 侧栏头部底部分界线：2px粗细，浅灰色 */
+  background-color: #F9F8F7;
+  min-width: 0;
+}
+
+.sidebar-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #32302C;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.collapse-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: #5F5E5B;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.collapse-btn:hover {
+  background-color: #F1F0EF;
+  color: #32302C;
+}
+
+.collapse-btn:active {
+  background-color: #E9E8E7;
+}
+
+.collapse-btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.collapse-btn .directional-icon {
+  transition: color 0.2s ease;
+}
+
+.sidebar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.pages-section {
+  flex: 1;
+  padding: 16px 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5F5E5B;
+  margin: 0 0 8px 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.page-tree {
+  display: flex;
+  flex-direction: column;
+}
+
+.page-item {
+  margin-bottom: 2px;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 2px 8px;
+  cursor: pointer;
+  color: #5F5E5B;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  position: relative;
+}
+
+.page-title:hover {
+  background-color: #F1F0EF;
+  color: #5F5E5B;
+}
+
+.page-title.active {
+  background-color: #E9E8E7;
+  color: #32302C;
+}
+
+.page-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 2px solid #F0EFEE;  /* 侧栏底部顶部分界线：2px粗细，浅灰色 */
+  flex-shrink: 0;
+  background-color: #F9F8F7;
+  min-width: 0;
+  margin-top: auto;  /* 确保 footer 始终在底部 */
+}
+
+.new-page-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #32302C;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.new-page-btn:hover {
+  background-color: #5F5E5B;
+}
+
+/* 主内容区 */
+.main-content {
+  margin-left: var(--sidebar-width, 280px);
+  transition: margin-left 0.3s ease;
+  flex: 1;
+  overflow-y: auto;
+  background-color: #ffffff;
+}
+
+/* 当侧栏折叠状态时，移除左边距让内容占满 */
+.app-layout.sidebar-collapsed .main-content,
+.app-layout.sidebar-animating .main-content {
+  margin-left: 0;
+}
+
+/* 拖拽时禁用右侧内容区的过渡动画，确保边界同步 */
+.resizable-sidebar-container.resizing ~ .main-content {
+  transition: none !important;
+}
+
+.content-wrapper {
+  padding: 40px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.content-wrapper h1 {
+  color: #32302C;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.content-wrapper h2 {
+  color: #32302C;
+  font-size: 1.8rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.content-wrapper p {
+  color: #5F5E5B;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+
+.content-wrapper ul {
+  color: #5F5E5B;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  padding-left: 1.5rem;
+}
+
+.content-wrapper li {
+  margin-bottom: 0.5rem;
+}
+
+.demo-content {
+  background-color: #F9F8F7;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-top: 2rem;
+  border: 2px solid #F0EFEE;  /* 演示内容区边框：2px粗细，浅灰色 */
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .resize-handle {
+    display: none;
+  }
+  
+  .sidebar-clipper {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 160;
+    height: 100vh;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.2);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar-clipper.mobile-open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .content-wrapper {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar-clipper {
+    width: 100vw;
+    max-width: 320px;
+  }
+}

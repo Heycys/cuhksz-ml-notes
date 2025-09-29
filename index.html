@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <title>我的笔记系统</title>
+    <!-- 主框架样式 -->
+    <link rel="stylesheet" href="assets\css\index.css">
+    <!-- 笔记内容所需的样式文件 -->
+    <link rel="stylesheet" type="text/css" href="assets\css\modern-norm.min.css">
+    <link rel="stylesheet" type="text/css" href="assets\css\prism.min.css">
+    <link rel="stylesheet" type="text/css" href="assets\css\katex.min.css">
+    <link rel="stylesheet" type="text/css" href="assets\css\wolai.css">
+</head>
+<body>
+    <div class="app-layout" id="appLayout">
+        <!-- 可调整大小的侧栏容器 -->
+        <div class="resizable-sidebar-container" id="sidebarContainer">
+            <!-- 裁剪层 -->
+            <div class="sidebar-clipper" id="sidebarClipper">
+                <!-- 内层侧栏 -->
+                <div class="sidebar-inner">
+                    <!-- 顶部遮挡片 -->
+                    <div class="sidebar-cap top"></div>
+                    
+                    <!-- 侧栏内容 -->
+                    <div class="sidebar">
+                        <!-- 侧栏头部 -->
+                        <div class="sidebar-header">
+                            <h2 class="sidebar-title">我的文档</h2>
+                            <button class="collapse-btn" id="collapseBtn" title="折叠侧栏">
+                                <!-- 折叠图标 -->
+                                <svg class="icon-backward directional-icon" viewBox="0 0 20 20" width="1em" height="1em" fill="currentColor">
+                                    <path d="M3.608 10.442a.625.625 0 0 1 0-.884l5.4-5.4a.625.625 0 0 1 .884.884L4.934 10l4.958 4.958a.625.625 0 1 1-.884.884z"></path>
+                                    <path d="m14.508 4.158-5.4 5.4a.625.625 0 0 0 0 .884l5.4 5.4a.625.625 0 1 0 .884-.884L10.434 10l4.958-4.958a.625.625 0 1 0-.884-.884"></path>
+                                </svg>
+                                <!-- 展开图标 -->
+                                <svg class="icon-forward directional-icon" viewBox="0 0 20 20" width="1em" height="1em" fill="currentColor" style="display: none;">
+                                    <path d="M16.392 9.558a.625.625 0 0 1 0 .884l-5.4 5.4a.625.625 0 0 1-.884-.884L15.066 10l-4.958-4.958a.625.625 0 1 1 .884-.884z"></path>
+                                    <path d="m5.492 15.842 5.4-5.4a.625.625 0 0 0 0-.884l-5.4-5.4a.625.625 0 1 0-.884.884L9.566 10l-4.958 4.958a.625.625 0 1 0 .884.884"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- 侧栏内容区 -->
+                        <div class="sidebar-content">
+                            <div class="pages-section">
+                                <h3 class="section-title">页面</h3>
+                                <div class="page-tree">
+                                    <!-- 静态页面树示例 -->
+                                    <div class="page-item">
+                                        <div class="page-title">
+                                            <span class="page-name">📄 首页</span>
+                                        </div>
+                                    </div>
+                                    <div class="page-item">
+                                        <div class="page-title">
+                                            <span class="page-name">📁 项目文档</span>
+                                        </div>
+                                    </div>
+                                    <div class="page-item">
+                                        <div class="page-title">
+                                            <span class="page-name">📝 会议记录</span>
+                                        </div>
+                                    </div>
+                                    <div class="page-item">
+                                        <div class="page-title">
+                                            <span class="page-name">💡 想法收集</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 侧栏底部 -->
+                            <div class="sidebar-footer">
+                                <button class="new-page-btn">+ 新建页面</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 底部遮挡片 -->
+                    <div class="sidebar-cap bottom"></div>
+                </div>
+            </div>
+
+            <!-- 拖拽调整大小的把手 -->
+            <div class="resize-handle" id="resizeHandle" style="display: block;"></div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content" id="mainContent">
+            <div class="content-wrapper">
+                <h1>主内容区域</h1>
+                <p>这里是右侧的主内容区域。你可以：</p>
+                <ul>
+                    <li>点击左侧的折叠按钮来折叠/展开侧栏</li>
+                    <li>拖拽侧栏右边缘来调整侧栏宽度</li>
+                    <li>当侧栏折叠后，将鼠标移到屏幕左边缘可以临时显示侧栏</li>
+                </ul>
+                <div class="demo-content">
+                    <h2>演示内容</h2>
+                    <p>这是一个类似Notion的侧栏交互演示。侧栏具有以下特性：</p>
+                    <ul>
+                        <li><strong>折叠动画</strong>：点击折叠按钮时，侧栏会有上下收缩的动画效果</li>
+                        <li><strong>悬浮显示</strong>：折叠后侧栏变为悬浮状态，鼠标接近左边缘时显示</li>
+                        <li><strong>自动隐藏</strong>：鼠标离开悬浮侧栏一段时间后自动隐藏</li>
+                        <li><strong>拖拽调整</strong>：可以拖拽侧栏右边缘来调整宽度</li>
+                        <li><strong>响应式设计</strong>：支持移动端适配</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets\js\index.js"></script>
+</body>
+</html>
