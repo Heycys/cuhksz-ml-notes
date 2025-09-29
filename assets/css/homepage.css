@@ -1,0 +1,130 @@
+/* 首页专用样式 */
+
+/* 基础布局 */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff;
+}
+
+/* 头部样式 */
+header {
+  padding: 40px 0 20px 0;
+  text-align: center;
+  border-bottom: 1px solid #F0EFEE;
+  margin-bottom: 40px;
+}
+
+header .title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+header .banner .icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+header .main-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #32302C;
+}
+
+/* 内容区样式 */
+article {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+/* 标题样式 */
+h1 {
+  color: #32302C;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+h2 {
+  color: #32302C;
+  font-size: 1.8rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+/* 文本样式 */
+p {
+  color: #5F5E5B;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+
+/* 列表样式 */
+ul {
+  color: #5F5E5B;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  padding-left: 1.5rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+/* 演示内容区样式 */
+.demo-content {
+  background-color: #F9F8F7;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-top: 2rem;
+  border: 2px solid #F0EFEE;
+}
+
+.demo-content h2 {
+  margin-top: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  article {
+    padding: 0 20px;
+  }
+  
+  header .main-title {
+    font-size: 2rem;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  .demo-content {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  article {
+    padding: 0 15px;
+  }
+  
+  header .banner .icon {
+    font-size: 36px;
+  }
+  
+  header .main-title {
+    font-size: 1.8rem;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  .demo-content {
+    padding: 1rem;
+  }
+}

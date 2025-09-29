@@ -1884,4 +1884,4 @@ article .bg-fluorescent_purple2 { background-color: var(--wolai-color-fluorescen
 
     }
     
-details > summary::-webkit-details-marker {display: none;} <!-- 隐藏箭头 -->
+details > summary::-webkit-details-marker {display: none;} /* 隐藏箭头 */

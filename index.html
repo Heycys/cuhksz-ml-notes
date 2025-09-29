@@ -48,27 +48,7 @@
                             <div class="pages-section">
                                 <h3 class="section-title">页面</h3>
                                 <div class="page-tree">
-                                    <!-- 静态页面树示例 -->
-                                    <div class="page-item">
-                                        <div class="page-title">
-                                            <span class="page-name">📄 首页</span>
-                                        </div>
-                                    </div>
-                                    <div class="page-item">
-                                        <div class="page-title">
-                                            <span class="page-name">📁 项目文档</span>
-                                        </div>
-                                    </div>
-                                    <div class="page-item">
-                                        <div class="page-title">
-                                            <span class="page-name">📝 会议记录</span>
-                                        </div>
-                                    </div>
-                                    <div class="page-item">
-                                        <div class="page-title">
-                                            <span class="page-name">💡 想法收集</span>
-                                        </div>
-                                    </div>
+                                    <!-- 导航项将通过JavaScript动态生成 -->
                                 </div>
                             </div>
                             
@@ -91,27 +71,32 @@
         <!-- 主内容区 -->
         <div class="main-content" id="mainContent">
             <div class="content-wrapper">
-                <h1>主内容区域</h1>
-                <p>这里是右侧的主内容区域。你可以：</p>
-                <ul>
-                    <li>点击左侧的折叠按钮来折叠/展开侧栏</li>
-                    <li>拖拽侧栏右边缘来调整侧栏宽度</li>
-                    <li>当侧栏折叠后，将鼠标移到屏幕左边缘可以临时显示侧栏</li>
-                </ul>
-                <div class="demo-content">
-                    <h2>演示内容</h2>
-                    <p>这是一个类似Notion的侧栏交互演示。侧栏具有以下特性：</p>
-                    <ul>
-                        <li><strong>折叠动画</strong>：点击折叠按钮时，侧栏会有上下收缩的动画效果</li>
-                        <li><strong>悬浮显示</strong>：折叠后侧栏变为悬浮状态，鼠标接近左边缘时显示</li>
-                        <li><strong>自动隐藏</strong>：鼠标离开悬浮侧栏一段时间后自动隐藏</li>
-                        <li><strong>拖拽调整</strong>：可以拖拽侧栏右边缘来调整宽度</li>
-                        <li><strong>响应式设计</strong>：支持移动端适配</li>
-                    </ul>
-                </div>
+                <!-- 内容将通过JavaScript动态加载 -->
             </div>
         </div>
     </div>
+
+    <!-- 笔记配置 -->
+    <script>
+        // 全局笔记配置
+        window.NOTEBOOK_CONFIG = [
+            {
+                name: '首页',
+                path: 'pages/首页/homepage.html',
+                icon: '🏠'
+            },
+            {
+                name: '概率统计',
+                path: 'pages/概率统计/概率统计.html',
+                icon: '📊'
+            },
+            {
+                name: '线性代数I',
+                path: 'pages/线性代数I/线性代数I.html',
+                icon: '📐'
+            }
+        ];
+    </script>
 
     <script src="assets\js\index.js"></script>
 </body>

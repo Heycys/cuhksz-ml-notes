@@ -380,48 +380,11 @@ body {
 }
 
 .content-wrapper {
-  padding: 40px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.content-wrapper h1 {
-  color: #32302C;
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-.content-wrapper h2 {
-  color: #32302C;
-  font-size: 1.8rem;
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-}
-
-.content-wrapper p {
-  color: #5F5E5B;
-  font-size: 1.1rem;
-  line-height: 1.7;
-  margin-bottom: 1rem;
-}
-
-.content-wrapper ul {
-  color: #5F5E5B;
-  font-size: 1.1rem;
-  line-height: 1.7;
-  padding-left: 1.5rem;
-}
-
-.content-wrapper li {
-  margin-bottom: 0.5rem;
-}
-
-.demo-content {
-  background-color: #F9F8F7;
-  padding: 2rem;
-  border-radius: 12px;
-  margin-top: 2rem;
-  border: 2px solid #F0EFEE;  /* 演示内容区边框：2px粗细，浅灰色 */
+  padding: 0;
+  max-width: none;
+  margin: 0;
+  width: 100%;
+  min-height: calc(100vh - 80px);
 }
 
 /* 响应式设计 */
@@ -448,10 +411,6 @@ body {
   .main-content {
     margin-left: 0;
   }
-  
-  .content-wrapper {
-    padding: 20px;
-  }
 }
 
 @media (max-width: 480px) {
@@ -459,4 +418,13 @@ body {
     width: 100vw;
     max-width: 320px;
   }
+}
+
+/* 全局图片渲染优化 */
+img {
+  /* 优先使用此属性，指示浏览器优化对比度，保持锐利 */
+  image-rendering: -webkit-optimize-contrast;
+  
+  /* 这是标准属性，让浏览器在缩放时保持硬边缘，不做平滑处理 */
+  image-rendering: crisp-edges;
 }

@@ -430,22 +430,11 @@ class SidebarController {
     }
 }
 
-// 笔记加载器类
+// 笔记加载器类 (最终修正版)
 class NotebookLoader {
     constructor() {
-        // 笔记配置
-        this.notebooks = [
-            {
-                name: '概率统计',
-                path: 'pages/概率统计/概率统计.html',
-                icon: '📊'
-            },
-            {
-                name: '线性代数I', 
-                path: 'pages/线性代数I/线性代数I.html',
-                icon: '📐'
-            }
-        ];
+        // 从HTML中读取笔记配置
+        this.notebooks = window.NOTEBOOK_CONFIG || [];
         
         this.currentNotebook = null;
         this.contentContainer = document.querySelector('#mainContent .content-wrapper');
@@ -468,7 +457,7 @@ class NotebookLoader {
         // 清空现有内容
         pageTree.innerHTML = '';
         
-        // 生成笔记导航项
+        // 生成所有导航项（包括首页）
         this.notebooks.forEach(notebook => {
             const pageItem = document.createElement('div');
             pageItem.className = 'page-item';
@@ -479,16 +468,6 @@ class NotebookLoader {
             `;
             pageTree.appendChild(pageItem);
         });
-        
-        // 添加首页导航
-        const homeItem = document.createElement('div');
-        homeItem.className = 'page-item';
-        homeItem.innerHTML = `
-            <div class="page-title" data-notebook="home">
-                <span class="page-name">🏠 首页</span>
-            </div>
-        `;
-        pageTree.insertBefore(homeItem, pageTree.firstChild);
     }
     
     // 绑定导航点击事件
@@ -511,21 +490,17 @@ class NotebookLoader {
             const notebookName = pageTitle.dataset.notebook;
             const notebookPath = pageTitle.dataset.path;
             
-            if (notebookName === 'home') {
-                this.loadDefaultContent();
-            } else {
-                await this.loadNotebook(notebookName, notebookPath);
-            }
+            // 所有内容都通过动态加载
+            await this.loadNotebook(notebookName, notebookPath);
         });
     }
     
-    // 加载笔记内容
+    // 加载内容（包括首页和笔记）
     async loadNotebook(notebookName, notebookPath) {
         try {
             // 显示加载状态
             this.showLoadingState();
-            
-            console.log(`正在加载笔记: ${notebookName}`);
+            console.log(`正在加载内容: ${notebookName}`);
             
             // 使用fetch加载HTML文件
             const response = await fetch(notebookPath);
@@ -538,39 +513,33 @@ class NotebookLoader {
             
             // 解析HTML内容
             const processedContent = this.parseAndProcessHTML(htmlContent, notebookName);
-            
             // 将内容插入到主内容区
             this.insertContent(processedContent);
             
             this.currentNotebook = notebookName;
-            console.log(`笔记 ${notebookName} 加载完成`);
-            
+            console.log(`内容 ${notebookName} 加载完成`);
         } catch (error) {
-            console.error('加载笔记失败:', error);
+            console.error('加载内容失败:', error);
             this.showErrorState(error.message);
         }
     }
     
     // 解析和处理HTML内容
     parseAndProcessHTML(htmlContent, notebookName) {
-        // 创建临时DOM来解析HTML
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, 'text/html');
         
-        // 提取文章内容（优先提取article标签，否则提取body内容）
-        let contentElement = doc.querySelector('article');
-        if (!contentElement) {
-            contentElement = doc.querySelector('body');
+        // 提取笔记的 <body> 元素
+        const noteBody = doc.querySelector('body');
+        if (!noteBody) {
+            throw new Error('无法在笔记文件中找到 <body> 标签');
         }
         
-        if (!contentElement) {
-            throw new Error('无法找到有效的内容');
-        }
+        // 修正 <body> 内部所有元素的资源路径
+        this.fixResourcePaths(noteBody, notebookName);
         
-        // 修正资源路径
-        this.fixResourcePaths(contentElement, notebookName);
-        
-        return contentElement.innerHTML;
+        // 返回 body 的完整 innerHTML
+        return noteBody.innerHTML;
     }
     
     // 修正资源路径
@@ -614,9 +583,8 @@ class NotebookLoader {
     // 将处理后的内容插入主内容区
     insertContent(content) {
         if (!this.contentContainer) return;
-        
         this.contentContainer.innerHTML = content;
-        
+
         // 滚动到顶部
         const mainContent = document.getElementById('mainContent');
         if (mainContent) {
@@ -627,11 +595,10 @@ class NotebookLoader {
     // 显示加载状态
     showLoadingState() {
         if (!this.contentContainer) return;
-        
         this.contentContainer.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: #5F5E5B;">
                 <div style="font-size: 48px; margin-bottom: 20px;">📖</div>
-                <h2 style="color: #32302C; margin-bottom: 10px;">正在加载笔记...</h2>
+                <h2 style="color: #32302C; margin-bottom: 10px;">正在加载内容...</h2>
                 <p>请稍等片刻</p>
             </div>
         `;
@@ -640,7 +607,6 @@ class NotebookLoader {
     // 显示错误状态
     showErrorState(message) {
         if (!this.contentContainer) return;
-        
         this.contentContainer.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: #dc3545;">
                 <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
@@ -660,33 +626,18 @@ class NotebookLoader {
     }
     
     // 加载默认内容（首页）
-    loadDefaultContent() {
-        if (!this.contentContainer) return;
-        
-        this.contentContainer.innerHTML = `
-            <h1>欢迎来到我的笔记系统</h1>
-            <p>这里是一个基于动态加载的笔记管理系统。你可以：</p>
-            <ul>
-                <li>点击左侧侧栏中的笔记标题来查看不同科目的笔记</li>
-                <li>点击左侧的折叠按钮来折叠/展开侧栏</li>
-                <li>拖拽侧栏右边缘来调整侧栏宽度</li>
-                <li>当侧栏折叠后，将鼠标移到屏幕左边缘可以临时显示侧栏</li>
-            </ul>
-            <div class="demo-content">
-                <h2>系统特性</h2>
-                <p>这个系统具有以下特性：</p>
-                <ul>
-                    <li><strong>动态内容加载</strong>：使用Ajax技术动态加载笔记内容，无需页面刷新</li>
-                    <li><strong>路径自动修正</strong>：自动修正图片和媒体文件的相对路径</li>
-                    <li><strong>样式预加载</strong>：预加载了所有必要的CSS样式文件</li>
-                    <li><strong>响应式侧栏</strong>：支持折叠、展开、拖拽调整等交互</li>
-                    <li><strong>数学公式支持</strong>：支持KaTeX数学公式渲染</li>
-                    <li><strong>代码高亮</strong>：支持Prism.js代码语法高亮</li>
-                </ul>
-            </div>
-        `;
-        
-        this.currentNotebook = null;
+    async loadDefaultContent() {
+        // 加载首页内容
+        const homePage = this.notebooks.find(notebook => notebook.name === '首页');
+        if (homePage) {
+            await this.loadNotebook(homePage.name, homePage.path);
+            
+            // 设置首页为活跃状态
+            const homeTitle = document.querySelector(`[data-notebook="${homePage.name}"]`);
+            if (homeTitle) {
+                homeTitle.classList.add('active');
+            }
+        }
     }
     
     // 获取当前加载的笔记
