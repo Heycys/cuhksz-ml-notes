@@ -1,3 +1,7 @@
+// 全局常量 - 响应式断点
+const MOBILE_BREAKPOINT = 760;           // 移动端断点（侧边栏隐藏、目录关闭）
+const SIDEBAR_COLLAPSE_BREAKPOINT = 1200; // 侧边栏自动折叠断点
+
 // 侧栏交互功能实现
 class SidebarController {
     constructor() {
@@ -26,6 +30,7 @@ class SidebarController {
         // 定时器引用
         this.hideTimeout = null;
         this.checkPositionTimeout = null;
+        this.hoverTimeout = null; // 识别区域停留定时器
         this.lastPointer = { x: 0, y: 0 };
         
         // 初始化
@@ -58,12 +63,12 @@ class SidebarController {
         // 更新拖拽把手可见性
         this.updateResizeHandleVisibility();
         
-        // 小于 1200px 时，自动折叠侧边栏（模拟点击折叠按钮）
-        if (width < 1200 && !this.isCollapsed) {
-            console.log('窗口宽度 < 1200px，自动折叠侧边栏');
+        // 小于侧边栏折叠断点时，自动折叠侧边栏（模拟点击折叠按钮）
+        if (width < SIDEBAR_COLLAPSE_BREAKPOINT && !this.isCollapsed) {
+            console.log(`窗口宽度 < ${SIDEBAR_COLLAPSE_BREAKPOINT}px，自动折叠侧边栏`);
             this.handleCollapse();
         }
-        // 大于等于 1200px 时，不自动展开，允许用户手动控制
+        // 大于等于侧边栏折叠断点时，不自动展开，允许用户手动控制
     }
     
     // 更新CSS变量
@@ -91,6 +96,19 @@ class SidebarController {
         this.sidebarClipper.addEventListener('transitionend', () => {
             this.checkMousePosition();
         });
+        
+        // 监听鼠标离开窗口，清理识别区域的停留定时器
+        document.addEventListener('mouseleave', () => {
+            this.clearHoverTimeout();
+        });
+    }
+    
+    // 清理停留定时器
+    clearHoverTimeout() {
+        if (this.hoverTimeout) {
+            clearTimeout(this.hoverTimeout);
+            this.hoverTimeout = null;
+        }
     }
     
     // 检查鼠标位置
@@ -105,10 +123,11 @@ class SidebarController {
         
         if (!isInSidebar) {
             if (this.hideTimeout) clearTimeout(this.hideTimeout);
+            // 【延迟时间1】动画结束后，鼠标不在侧栏区域，等待多久自动隐藏侧栏
             this.hideTimeout = setTimeout(() => {
                 this.setShowSidebar(false);
                 this.hideTimeout = null;
-            }, 500);
+            }, 500); // 500ms
         } else {
             if (this.hideTimeout) {
                 clearTimeout(this.hideTimeout);
@@ -121,12 +140,28 @@ class SidebarController {
     handleGlobalMouseMove(e) {
         if (!this.isCollapsed) return;
         
-        // 如果侧栏当前隐藏，检查是否靠近左边缘来显示
-        if (!this.showSidebar && !this.isAnimating && !this.isExpanding && e.clientX <= 10) {
-            this.setShowSidebar(true);
-            if (this.hideTimeout) {
-                clearTimeout(this.hideTimeout);
-                this.hideTimeout = null;
+        const triggerZoneWidth = 20; // 识别区域宽度（从 10px 增加到 20px）
+        const isInTriggerZone = e.clientX <= triggerZoneWidth && e.clientX >= 0;
+        
+        // 如果侧栏当前隐藏，检查是否在识别区域内
+        if (!this.showSidebar && !this.isAnimating && !this.isExpanding) {
+            if (isInTriggerZone) {
+                // 鼠标进入识别区域，启动停留定时器
+                if (!this.hoverTimeout) {
+                    // 【延迟时间2】鼠标在识别区域（左侧20px）停留多久后显示侧栏
+                    this.hoverTimeout = setTimeout(() => {
+                        // 停留超过设定时间，显示侧栏
+                        this.setShowSidebar(true);
+                        if (this.hideTimeout) {
+                            clearTimeout(this.hideTimeout);
+                            this.hideTimeout = null;
+                        }
+                        this.hoverTimeout = null;
+                    }, 300); // 300ms (0.3秒)
+                }
+            } else {
+                // 鼠标离开识别区域，取消停留定时器
+                this.clearHoverTimeout();
             }
             return;
         }
@@ -139,10 +174,11 @@ class SidebarController {
             
             if (!isInSidebar && !this.hideTimeout) {
                 // 鼠标不在侧栏区域内，启动自动隐藏定时器
+                // 【延迟时间3】鼠标离开侧栏后，等待多久自动隐藏
                 this.hideTimeout = setTimeout(() => {
                     this.setShowSidebar(false);
                     this.hideTimeout = null;
-                }, 500);
+                }, 200); // 200ms (0.2秒)
             } else if (isInSidebar && this.hideTimeout) {
                 // 鼠标回到侧栏区域内，取消自动隐藏定时器
                 clearTimeout(this.hideTimeout);
@@ -166,12 +202,12 @@ class SidebarController {
             this.setFloatingState(false);
             this.setShowSidebar(true);
             
-            // 10ms后开始展开尺寸动画
+            // 【延迟时间4】展开动画启动延迟（让CSS样式先生效）
             setTimeout(() => {
                 this.setInExpansion(true);
-            }, 10);
+            }, 10); // 10ms
             
-            // 0.3秒后完成展开
+            // 【延迟时间5】展开动画总时长（需与CSS的transition时间一致）
             setTimeout(() => {
                 this.setCollapsedState(false);
                 this.setExpandingState(false);
@@ -181,7 +217,7 @@ class SidebarController {
                 
                 // 通知页面菜单控制器更新图标
                 this.notifyCollapseStateChange();
-            }, 300);
+            }, 200); // 200ms (0.2秒)
         } else {
             // 防止重复点击
             if (this.isAnimating || this.isExpanding) {
@@ -193,12 +229,12 @@ class SidebarController {
             this.setAnimatingState(true);
             this.setShowSidebar(true);
             
-            // 10ms后开始尺寸动画（让样式先生效）
+            // 【延迟时间6】折叠动画启动延迟（让CSS样式先生效）
             setTimeout(() => {
                 this.setInAnimation(true);
-            }, 10);
+            }, 10); // 10ms
             
-            // 0.3秒后完成尺寸收缩动画，变成悬浮状态
+            // 【延迟时间7】折叠动画总时长（需与CSS的transition时间一致）
             setTimeout(() => {
                 this.setFloatingState(true);
                 this.setAnimatingState(false);
@@ -211,7 +247,7 @@ class SidebarController {
                 
                 // 通知页面菜单控制器更新图标
                 this.notifyCollapseStateChange();
-            }, 300);
+            }, 200); // 200ms (0.2秒)
         }
     }
     
@@ -238,11 +274,12 @@ class SidebarController {
                 clearTimeout(this.hideTimeout);
             }
             
-            // 0.5秒后自动隐藏
+            // 【延迟时间3-B】鼠标离开侧栏触发的隐藏延迟（与延迟时间3保持一致）
+            // 注意：这里会先于 handleGlobalMouseMove 触发
             this.hideTimeout = setTimeout(() => {
                 this.setShowSidebar(false);
                 this.hideTimeout = null;
-            }, 500);
+            }, 200); // 200ms (0.2秒) - 已同步更新
         }
     }
     
@@ -444,6 +481,9 @@ class SidebarController {
         }
         if (this.checkPositionTimeout) {
             clearTimeout(this.checkPositionTimeout);
+        }
+        if (this.hoverTimeout) {
+            clearTimeout(this.hoverTimeout);
         }
         
         // 移除事件监听
@@ -958,7 +998,9 @@ class TOCController {
         this.tocSidebar = document.getElementById('tocSidebar');
         this.tocBody = document.getElementById('tocBody');
         this.contentWithToc = document.querySelector('.content-with-toc');
+        this.mobileTocButton = document.getElementById('mobileTocButton');
         this.isVisible = true; // 默认显示目录
+        this.lastWidth = undefined; // 记录上次宽度，用于判断移动端/桌面端切换
         
         this.init();
     }
@@ -966,24 +1008,31 @@ class TOCController {
     init() {
         // 根据窗口大小决定是否显示目录
         const width = window.innerWidth;
-        if (width < 768) {
-            // 小屏幕默认关闭目录
+        if (width < MOBILE_BREAKPOINT) {
+            // 移动端：关闭目录，显示悬浮按钮
             this.isVisible = false;
             this.hide();
             if (this.contentWithToc) {
                 this.contentWithToc.classList.remove('toc-visible');
             }
-            // 延迟更新菜单开关，等待DOM完全加载
+            // 确保悬浮按钮显示（移除hidden类）
+            if (this.mobileTocButton) {
+                this.mobileTocButton.classList.remove('hidden');
+            }
+            // 菜单开关默认开启（表示悬浮按钮是显示的）
             setTimeout(() => {
-                this.updateMenuSwitch(false);
+                this.updateMenuSwitch(true);
             }, 100);
         } else {
-            // 大屏幕默认显示目录
+            // 桌面端默认显示目录
             this.show();
             setTimeout(() => {
                 this.updateMenuSwitch(true);
             }, 100);
         }
+        
+        // 绑定移动端悬浮按钮事件
+        this.bindMobileButton();
         
         // 监听窗口大小变化
         window.addEventListener('resize', () => {
@@ -991,17 +1040,72 @@ class TOCController {
         });
     }
     
+    // 绑定移动端悬浮按钮事件
+    bindMobileButton() {
+        if (this.mobileTocButton) {
+            this.mobileTocButton.addEventListener('click', () => {
+                // 悬浮按钮点击：切换目录的显示/隐藏（不是切换按钮自己）
+                this.toggleTOC();
+            });
+        }
+    }
+    
+    // 切换目录显示/隐藏（不影响悬浮按钮）
+    toggleTOC() {
+        if (this.isVisible) {
+            this.hide();
+        } else {
+            this.show();
+        }
+    }
+    
     // 处理窗口大小变化
     handleWindowResize() {
         const width = window.innerWidth;
+        const wasMobile = this.lastWidth !== undefined && this.lastWidth < MOBILE_BREAKPOINT;
+        const isMobile = width < MOBILE_BREAKPOINT;
         
-        // 小于 768px 时，如果目录是打开的，自动关闭（模拟点击关闭）
-        if (width < 768 && this.isVisible) {
-            console.log('窗口宽度 < 768px，自动关闭目录');
-            this.toggle(); // 相当于点击了关闭目录
-            this.updateMenuSwitch(false);
+        // 从桌面端变成移动端时，自动关闭目录（但保持悬浮按钮显示）
+        if (isMobile && this.isVisible) {
+            console.log(`窗口宽度 < ${MOBILE_BREAKPOINT}px，移动端模式：关闭目录`);
+            this.hide();
+            // 确保悬浮按钮显示（如果菜单开关是开启的）
+            if (this.mobileTocButton && !this.mobileTocButton.classList.contains('hidden')) {
+                this.mobileTocButton.classList.remove('hidden');
+            }
         }
-        // 大于等于 768px 时，不自动打开，允许用户手动控制
+        // 从移动端变成桌面端时，根据菜单开关状态决定是否显示目录
+        else if (wasMobile && !isMobile) {
+            console.log(`窗口宽度 >= ${MOBILE_BREAKPOINT}px，桌面端模式`);
+            // 检查菜单开关状态
+            const switchState = this.getMenuSwitchState();
+            if (switchState) {
+                // 开关是开启的，显示目录
+                this.show();
+            } else {
+                // 开关是关闭的，保持隐藏
+                this.hide();
+            }
+        }
+        
+        // 记录当前宽度，用于下次判断
+        this.lastWidth = width;
+    }
+    
+    // 获取菜单中目录开关的状态
+    getMenuSwitchState() {
+        const moreMenu = document.getElementById('moreMenu');
+        if (!moreMenu) return true; // 默认开启
+        
+        const menuItems = moreMenu.querySelectorAll('.menu-item');
+        for (const item of menuItems) {
+            const label = item.querySelector('.label');
+            if (label && label.textContent.trim() === '目录') {
+                const switchEl = item.querySelector('.switch-container');
+                return switchEl ? switchEl.classList.contains('on') : true;
+            }
+        }
+        return true; // 默认开启
     }
     
     // 更新菜单中的目录开关状态
@@ -1047,12 +1151,28 @@ class TOCController {
         }
     }
     
-    // 切换显示/隐藏
+    // 切换显示/隐藏（菜单开关调用）
     toggle() {
-        if (this.isVisible) {
-            this.hide();
+        const width = window.innerWidth;
+        
+        if (width < MOBILE_BREAKPOINT) {
+            // 移动端：菜单开关控制悬浮按钮的显示/隐藏
+            if (this.mobileTocButton) {
+                if (this.mobileTocButton.classList.contains('hidden')) {
+                    this.mobileTocButton.classList.remove('hidden');
+                } else {
+                    this.mobileTocButton.classList.add('hidden');
+                    // 隐藏悬浮按钮的同时，也关闭目录
+                    this.hide();
+                }
+            }
         } else {
-            this.show();
+            // 桌面端：菜单开关控制目录的显示/隐藏
+            if (this.isVisible) {
+                this.hide();
+            } else {
+                this.show();
+            }
         }
     }
     
@@ -1259,9 +1379,9 @@ class PageMenuController {
             const width = window.innerWidth;
             
             // 判断点击行为：
-            // 1. 宽度 >= 660px 且鼠标悬停 → 触发折叠/展开侧栏
+            // 1. 宽度 >= 移动端断点 且鼠标悬停 → 触发折叠/展开侧栏
             // 2. 其他情况 → 触发页面菜单
-            if (width >= 660 && this.isHovering) {
+            if (width >= MOBILE_BREAKPOINT && this.isHovering) {
                 // 触发折叠/展开侧栏
                 if (this.sidebarController) {
                     this.sidebarController.handleCollapse();
@@ -1301,7 +1421,7 @@ class PageMenuController {
     updateTooltip() {
         const width = window.innerWidth;
         
-        if (width >= 660 && this.isHovering) {
+        if (width >= MOBILE_BREAKPOINT && this.isHovering) {
             // 悬停时显示折叠/展开提示
             const tooltipText = this.sidebarController?.isCollapsed ? '展开侧栏' : '折叠侧栏';
             this.pageMenuButton.setAttribute('data-tooltip', tooltipText);

@@ -40,6 +40,10 @@ body {
   --sidebar-width: 260px;  /* 侧边栏宽度 */
   --toc-width: 260px;      /* 目录宽度 */
   --scrollbar-width: 10px; /* 滚动条宽度 */
+  
+  /* 注意：响应式断点宽度在 JavaScript 中定义为常量 */
+  /* MOBILE_BREAKPOINT = 760px - 移动端断点（侧边栏隐藏、目录关闭） */
+  /* SIDEBAR_COLLAPSE_BREAKPOINT = 1200px - 侧边栏自动折叠断点 */
 }
 
 /* 应用布局 */
@@ -58,6 +62,7 @@ body {
   flex-shrink: 0;
 }
 
+
 /* 确保resize-handle在正确的层级 */
 .resizable-sidebar-container:not(.collapsed) {
   padding-right: 0; /* 确保有空间给resize-handle */
@@ -72,6 +77,7 @@ body {
   overflow: hidden;            /* 负责裁剪上下边界 */
   width: var(--sidebar-width, 280px);
   display: flex;               /* 让 inner 撑满 */
+  /* 【动画时间1】上下收缩动画时间 */
   transition: top 0.2s ease, bottom 0.2s ease, width 0.2s ease;
 }
 
@@ -85,7 +91,8 @@ body {
   border-right: 2px solid #F0EFEE;  /* 侧栏右侧分界线：2px粗细，浅灰色 */
   position: relative;
   z-index: 1000;
-  transition: transform 0.2s ease, opacity 0.2s ease; /* 动画时间0.2s，透明度0.2s */
+  /* 【动画时间2】左侧栏左移动画时间（非浮动状态） */
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 /* ---------- 遮挡片，盖住圆角 & 投影 ---------- */
@@ -102,8 +109,8 @@ body {
 
 /* ---------- 折叠 / 展开动画：顶、底往里收 ---------- */
 .resizable-sidebar-container.animating .sidebar-clipper,
-.resizable-sidebar-container.expanding .sidebar-clipper {  /* 阴影 + 圆角 */
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+.resizable-sidebar-container.expanding .sidebar-clipper {
+  /* 动画期间应用圆角 */
   border-radius: 0 12px 12px 0;
 }
 
@@ -116,7 +123,6 @@ body {
 .resizable-sidebar-container.expanding.in-expansion .sidebar-clipper {
   top: 0; 
   bottom: 0;        /* 动画结束复位 */
-  box-shadow: none;
   border-radius: 0;
 }
 
@@ -126,10 +132,12 @@ body {
   left: 0; 
   top: 10vh; 
   bottom: 10vh;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-  border-radius: 0 12px 12px 0;
+  /* 【阴影效果】浮动状态下显示阴影和圆角 */
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 0 12px 12px 0 !important;
   z-index: 1001;
-  transition: transform 0.3s ease;
+  /* 【动画时间3】浮动状态下左移动画时间（鼠标触发显示/隐藏） */
+  transition: transform 0.2s ease;
 }
 
 /* ---------- X 方向位移 ---------- */
@@ -521,8 +529,9 @@ body {
   transition: fill 0.2s ease;
 }
 
-/* 宽度 >= 660px 时，悬停显示折叠图标 */
-@media (min-width: 660px) {
+/* 宽度 >= 移动端断点时，悬停显示折叠图标 */
+/* 断点值: 760px (与 JavaScript 中的 MOBILE_BREAKPOINT 保持一致) */
+@media (min-width: 760px) {
   .page-menu-button:hover .menu-icon {
     opacity: 0;
   }
@@ -533,8 +542,8 @@ body {
   }
 }
 
-/* 宽度 < 660px 时，折叠图标始终隐藏 */
-@media (max-width: 659px) {
+/* 宽度 < 移动端断点时，折叠图标始终隐藏 */
+@media (max-width: 767px) {
   .page-menu-button .collapse-icon {
     display: none !important;
   }
@@ -870,6 +879,18 @@ body {
   transform: translateY(8px);
 }
 
+/* 为移动端目录按钮定位tooltip - 显示在按钮左侧 */
+.mobile-toc-button[data-tooltip]::before {
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%) translateX(-8px);
+  margin-right: 2px;
+}
+
+.mobile-toc-button[data-tooltip]:hover::before {
+  transform: translateY(-50%) translateX(-10px);
+}
+
 /* 为更多按钮定位tooltip - 显示在按钮下方右侧 */
 .more-button[data-tooltip]::before {
   top: 100%;
@@ -994,6 +1015,47 @@ body.full-width .content-wrapper header > div.title {
   max-width: 100% !important;
 }
 
+/* 移动端目录悬浮按钮 */
+.mobile-toc-button {
+  display: none; /* 默认隐藏 */
+  position: fixed;
+  top: 70px; /* 在顶栏下方一点 */
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background-color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  z-index: 200;
+  transition: all 0.2s ease;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-toc-button:active {
+  transform: scale(0.95);
+}
+
+/* 隐藏悬浮按钮 */
+.mobile-toc-button.hidden {
+  display: none !important;
+}
+
+.mobile-toc-button svg {
+  width: 20px;
+  height: 20px;
+  fill: #494840;
+}
+
+/* 移动端显示悬浮按钮 */
+@media (max-width: 760px) {
+  .mobile-toc-button {
+    display: flex !important;
+  }
+}
+
 /* 目录侧边栏 - 固定在右侧 */
 .toc-sidebar {
   position: fixed;
@@ -1012,6 +1074,20 @@ body.full-width .content-wrapper header > div.title {
   width: var(--toc-width);
   right: var(--scrollbar-width); /* 留出滚动条空间 */
   border-left: 1px solid #EAEAEA;
+}
+
+/* 移动端目录浮动模式 */
+@media (max-width: 760px) {
+  .toc-sidebar.show {
+    width: 280px;
+    right: 0; /* 移动端不留滚动条空间 */
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* 移动端目录不挤压内容 */
+  .content-with-toc.toc-visible .content-wrapper {
+    padding-right: 0 !important;
+  }
 }
 
 /* 目录主容器 */
@@ -1036,7 +1112,6 @@ body.full-width .content-wrapper header > div.title {
 
 .toc-title {
   font-size: 14px;
-  font-weight: 600;
   color: #333;
 }
 

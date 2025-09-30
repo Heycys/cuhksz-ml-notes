@@ -89,7 +89,7 @@ li {
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
+@media (max-width: 760px) {
   article {
     padding: 0 20px;
   }
