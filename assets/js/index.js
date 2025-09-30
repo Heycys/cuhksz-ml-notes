@@ -5,7 +5,6 @@ class SidebarController {
         this.appLayout = document.getElementById('appLayout');
         this.sidebarContainer = document.getElementById('sidebarContainer');
         this.sidebarClipper = document.getElementById('sidebarClipper');
-        this.collapseBtn = document.getElementById('collapseBtn');
         this.resizeHandle = document.getElementById('resizeHandle');
         this.mainContent = document.getElementById('mainContent');
         
@@ -29,10 +28,6 @@ class SidebarController {
         this.checkPositionTimeout = null;
         this.lastPointer = { x: 0, y: 0 };
         
-        // 图标元素
-        this.iconBackward = this.collapseBtn.querySelector('.icon-backward');
-        this.iconForward = this.collapseBtn.querySelector('.icon-forward');
-        
         // 初始化
         this.init();
     }
@@ -46,6 +41,29 @@ class SidebarController {
         document.addEventListener('pointermove', (e) => {
             this.lastPointer = { x: e.clientX, y: e.clientY };
         }, { passive: true });
+        
+        // 监听窗口大小变化
+        window.addEventListener('resize', () => {
+            this.handleWindowResize();
+        });
+        
+        // 初始化时检查窗口大小
+        this.handleWindowResize();
+    }
+    
+    // 处理窗口大小变化
+    handleWindowResize() {
+        const width = window.innerWidth;
+        
+        // 更新拖拽把手可见性
+        this.updateResizeHandleVisibility();
+        
+        // 小于 1200px 时，自动折叠侧边栏（模拟点击折叠按钮）
+        if (width < 1200 && !this.isCollapsed) {
+            console.log('窗口宽度 < 1200px，自动折叠侧边栏');
+            this.handleCollapse();
+        }
+        // 大于等于 1200px 时，不自动展开，允许用户手动控制
     }
     
     // 更新CSS变量
@@ -55,11 +73,6 @@ class SidebarController {
     
     // 绑定事件
     bindEvents() {
-        // 折叠按钮点击事件
-        this.collapseBtn.addEventListener('click', () => {
-            this.handleCollapse();
-        });
-        
         // 拖拽调整大小事件
         this.resizeHandle.addEventListener('mousedown', (e) => {
             this.handleMouseDown(e);
@@ -165,6 +178,9 @@ class SidebarController {
                 this.setInExpansion(false);
                 this.setShowSidebar(false);
                 this.setAnimatingState(false);
+                
+                // 通知页面菜单控制器更新图标
+                this.notifyCollapseStateChange();
             }, 300);
         } else {
             // 防止重复点击
@@ -192,7 +208,17 @@ class SidebarController {
                 requestAnimationFrame(() => {
                     this.checkMousePosition();
                 });
+                
+                // 通知页面菜单控制器更新图标
+                this.notifyCollapseStateChange();
             }, 300);
+        }
+    }
+    
+    // 通知其他控制器侧边栏状态变化
+    notifyCollapseStateChange() {
+        if (window.pageMenuController) {
+            window.pageMenuController.updateCollapseIcon();
         }
     }
     
@@ -322,7 +348,7 @@ class SidebarController {
     
     // 更新拖拽把手的可见性
     updateResizeHandleVisibility() {
-        // 只在非折叠、非动画、非展开状态下显示拖拽把手
+        // 只在侧边栏完全展开（非折叠、非动画、非展开过程中）时显示拖拽把手
         if (!this.isCollapsed && !this.isAnimating && !this.isExpanding) {
             this.resizeHandle.style.display = 'block';
             this.resizeHandle.style.left = `${this.sidebarWidth}px`;
@@ -401,19 +427,8 @@ class SidebarController {
     }
     
     updateCollapseButton() {
-        // 延迟更新按钮提示文字，避免点击时内容闪变
-        setTimeout(() => {
-            this.collapseBtn.setAttribute('data-tooltip', this.isCollapsed ? '展开侧栏' : '折叠侧栏');
-        }, 150); // 等待tooltip消失动画完成
-        
-        // 立即切换图标显示
-        if (this.isCollapsed) {
-            this.iconBackward.style.display = 'none';
-            this.iconForward.style.display = 'block';
-        } else {
-            this.iconBackward.style.display = 'block';
-            this.iconForward.style.display = 'none';
-        }
+        // 折叠按钮已移除，不需要更新
+        // 图标状态由 PageMenuController 负责更新
     }
     
     // 初始化全局鼠标移动处理器（需要绑定this）
@@ -554,11 +569,28 @@ class NotebookLoader {
             // 将内容插入到主内容区
             this.insertContent(processedContent);
             
+            // 更新编辑信息
+            this.updateNotebookInfo(notebookName);
+            
             this.currentNotebook = notebookName;
             console.log(`内容 ${notebookName} 加载完成`);
         } catch (error) {
             console.error('加载内容失败:', error);
             this.showErrorState(error.message);
+        }
+    }
+    
+    // 更新笔记信息（编辑者和编辑时间）
+    updateNotebookInfo(notebookName) {
+        // 从配置中查找当前笔记的信息
+        const notebook = this.notebooks.find(nb => nb.name === notebookName);
+        
+        if (notebook && window.moreMenuController) {
+            const author = notebook.author || '未知';
+            const editTime = notebook.lastEditTime || '未知时间';
+            
+            window.moreMenuController.updateEditInfo(author, editTime);
+            console.log('编辑信息已更新:', author, editTime);
         }
     }
     
@@ -631,11 +663,42 @@ class NotebookLoader {
             this.tocController.generateTOC(this.contentContainer);
         }
 
+        // 统计字数并更新显示
+        this.updateWordCount();
+
         // 滚动到顶部
         const contentWithToc = document.querySelector('.content-with-toc');
         if (contentWithToc) {
             contentWithToc.scrollTop = 0;
         }
+    }
+    
+    // 统计字数
+    updateWordCount() {
+        if (!this.contentContainer) return;
+        
+        // 获取纯文本内容
+        const textContent = this.contentContainer.innerText || this.contentContainer.textContent || '';
+        
+        // 统计中文字符、英文单词和数字
+        // 移除多余的空白字符
+        const cleanText = textContent.replace(/\s+/g, ' ').trim();
+        
+        // 统计中文字符（包括中文标点）
+        const chineseChars = cleanText.match(/[\u4e00-\u9fa5]/g) || [];
+        
+        // 统计英文单词和数字（连续的字母或数字算一个单词）
+        const westernWords = cleanText.match(/[a-zA-Z0-9]+/g) || [];
+        
+        // 总字数 = 中文字符数 + 英文单词数
+        const totalCount = chineseChars.length + westernWords.length;
+        
+        // 更新菜单中的字数显示
+        if (window.moreMenuController) {
+            window.moreMenuController.updateWordCount(totalCount);
+        }
+        
+        console.log('字数统计:', totalCount, '(中文:', chineseChars.length, '+ 英文单词:', westernWords.length, ')');
     }
     
     // 显示加载状态
@@ -895,14 +958,71 @@ class TOCController {
         this.tocSidebar = document.getElementById('tocSidebar');
         this.tocBody = document.getElementById('tocBody');
         this.contentWithToc = document.querySelector('.content-with-toc');
-        this.isVisible = false;
+        this.isVisible = true; // 默认显示目录
         
         this.init();
     }
     
     init() {
-        // 默认隐藏目录
-        this.hide();
+        // 根据窗口大小决定是否显示目录
+        const width = window.innerWidth;
+        if (width < 768) {
+            // 小屏幕默认关闭目录
+            this.isVisible = false;
+            this.hide();
+            if (this.contentWithToc) {
+                this.contentWithToc.classList.remove('toc-visible');
+            }
+            // 延迟更新菜单开关，等待DOM完全加载
+            setTimeout(() => {
+                this.updateMenuSwitch(false);
+            }, 100);
+        } else {
+            // 大屏幕默认显示目录
+            this.show();
+            setTimeout(() => {
+                this.updateMenuSwitch(true);
+            }, 100);
+        }
+        
+        // 监听窗口大小变化
+        window.addEventListener('resize', () => {
+            this.handleWindowResize();
+        });
+    }
+    
+    // 处理窗口大小变化
+    handleWindowResize() {
+        const width = window.innerWidth;
+        
+        // 小于 768px 时，如果目录是打开的，自动关闭（模拟点击关闭）
+        if (width < 768 && this.isVisible) {
+            console.log('窗口宽度 < 768px，自动关闭目录');
+            this.toggle(); // 相当于点击了关闭目录
+            this.updateMenuSwitch(false);
+        }
+        // 大于等于 768px 时，不自动打开，允许用户手动控制
+    }
+    
+    // 更新菜单中的目录开关状态
+    updateMenuSwitch(isOn) {
+        const moreMenu = document.getElementById('moreMenu');
+        if (!moreMenu) return;
+        
+        const menuItems = moreMenu.querySelectorAll('.menu-item');
+        menuItems.forEach(item => {
+            const label = item.querySelector('.label');
+            if (label && label.textContent.trim() === '目录') {
+                const switchEl = item.querySelector('.switch-container');
+                if (switchEl) {
+                    if (isOn) {
+                        switchEl.classList.add('on');
+                    } else {
+                        switchEl.classList.remove('on');
+                    }
+                }
+            }
+        });
     }
     
     // 显示目录
@@ -1096,6 +1216,206 @@ class TOCController {
     }
 }
 
+// 页面菜单控制器类
+class PageMenuController {
+    constructor(notebookLoader, sidebarController) {
+        this.pageMenuButton = document.getElementById('pageMenuButton');
+        this.pageMenu = document.getElementById('pageMenu');
+        this.pageMenuBody = document.getElementById('pageMenuBody');
+        this.notebookLoader = notebookLoader;
+        this.sidebarController = sidebarController;
+        this.isOpen = false;
+        this.isHovering = false;
+        
+        // 折叠图标元素
+        this.collapseIconContainer = document.getElementById('collapseIconInMenu');
+        this.iconBackward = this.collapseIconContainer?.querySelector('.icon-backward');
+        this.iconForward = this.collapseIconContainer?.querySelector('.icon-forward');
+        
+        this.init();
+    }
+    
+    init() {
+        this.bindEvents();
+        this.updateCollapseIcon();
+    }
+    
+    bindEvents() {
+        // 鼠标进入/离开事件
+        this.pageMenuButton.addEventListener('mouseenter', () => {
+            this.isHovering = true;
+            this.updateTooltip();
+        });
+        
+        this.pageMenuButton.addEventListener('mouseleave', () => {
+            this.isHovering = false;
+            this.updateTooltip();
+        });
+        
+        // 页面菜单按钮点击事件
+        this.pageMenuButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            const width = window.innerWidth;
+            
+            // 判断点击行为：
+            // 1. 宽度 >= 660px 且鼠标悬停 → 触发折叠/展开侧栏
+            // 2. 其他情况 → 触发页面菜单
+            if (width >= 660 && this.isHovering) {
+                // 触发折叠/展开侧栏
+                if (this.sidebarController) {
+                    this.sidebarController.handleCollapse();
+                    // 延迟更新折叠图标状态，等待动画完成
+                    setTimeout(() => {
+                        this.updateCollapseIcon();
+                        this.updateTooltip();
+                    }, 100);
+                }
+            } else {
+                // 触发页面菜单
+                this.toggleMenu();
+            }
+        });
+        
+        // 点击菜单外部关闭
+        document.addEventListener('click', (e) => {
+            if (this.isOpen && !this.pageMenu.contains(e.target) && !this.pageMenuButton.contains(e.target)) {
+                this.hideMenu();
+            }
+        });
+        
+        // ESC键关闭菜单
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isOpen) {
+                this.hideMenu();
+            }
+        });
+        
+        // 阻止菜单内部点击事件冒泡
+        this.pageMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+    
+    // 更新 tooltip 文字
+    updateTooltip() {
+        const width = window.innerWidth;
+        
+        if (width >= 660 && this.isHovering) {
+            // 悬停时显示折叠/展开提示
+            const tooltipText = this.sidebarController?.isCollapsed ? '展开侧栏' : '折叠侧栏';
+            this.pageMenuButton.setAttribute('data-tooltip', tooltipText);
+        } else {
+            // 默认显示切换页面提示
+            this.pageMenuButton.setAttribute('data-tooltip', '切换页面');
+        }
+    }
+    
+    // 更新折叠图标的显示状态
+    updateCollapseIcon() {
+        if (!this.iconBackward || !this.iconForward || !this.sidebarController) return;
+        
+        if (this.sidebarController.isCollapsed) {
+            this.iconBackward.style.display = 'none';
+            this.iconForward.style.display = 'block';
+        } else {
+            this.iconBackward.style.display = 'block';
+            this.iconForward.style.display = 'none';
+        }
+    }
+    
+    // 生成页面菜单项
+    generatePageMenuItems() {
+        if (!this.pageMenuBody || !this.notebookLoader) return;
+        
+        const notebooks = this.notebookLoader.notebooks;
+        const currentNotebook = this.notebookLoader.currentNotebook;
+        
+        // 清空现有内容
+        this.pageMenuBody.innerHTML = '';
+        
+        // 生成菜单项
+        notebooks.forEach(notebook => {
+            const menuItem = document.createElement('div');
+            menuItem.className = 'page-menu-item';
+            if (notebook.name === currentNotebook) {
+                menuItem.classList.add('active');
+            }
+            
+            // 获取图标
+            const displayIcon = this.notebookLoader.notebookIcons.get(notebook.name) || '📄';
+            
+            // 如果图标包含HTML标签，需要特殊处理
+            const iconHTML = displayIcon.includes('<') 
+                ? displayIcon 
+                : `<span style="display: block;">${displayIcon}</span>`;
+            
+            menuItem.innerHTML = `
+                <div class="page-menu-item-icon">${iconHTML}</div>
+                <div class="page-menu-item-name">${notebook.name}</div>
+            `;
+            
+            // 点击事件
+            menuItem.addEventListener('click', async () => {
+                // 移除所有活跃状态
+                this.pageMenuBody.querySelectorAll('.page-menu-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                // 设置当前项为活跃状态
+                menuItem.classList.add('active');
+                
+                // 更新侧边栏的活跃状态
+                document.querySelectorAll('.page-title.active').forEach(item => {
+                    item.classList.remove('active');
+                });
+                const sidebarItem = document.querySelector(`[data-notebook="${notebook.name}"]`);
+                if (sidebarItem) {
+                    sidebarItem.classList.add('active');
+                }
+                
+                // 更新面包屑
+                this.notebookLoader.updateBreadcrumb(notebook.name);
+                
+                // 加载笔记
+                await this.notebookLoader.loadNotebook(notebook.name, notebook.path);
+                
+                // 关闭菜单
+                this.hideMenu();
+            });
+            
+            this.pageMenuBody.appendChild(menuItem);
+        });
+    }
+    
+    toggleMenu() {
+        if (this.isOpen) {
+            this.hideMenu();
+        } else {
+            this.showMenu();
+        }
+    }
+    
+    showMenu() {
+        this.pageMenu.classList.add('show');
+        this.isOpen = true;
+        
+        // 每次打开时重新生成菜单项，确保状态同步
+        this.generatePageMenuItems();
+        
+        // 更新按钮状态
+        this.pageMenuButton.setAttribute('aria-expanded', 'true');
+    }
+    
+    hideMenu() {
+        this.pageMenu.classList.remove('show');
+        this.isOpen = false;
+        
+        // 更新按钮状态
+        this.pageMenuButton.setAttribute('aria-expanded', 'false');
+    }
+}
+
 // 更多菜单控制器类
 class MoreMenuController {
     constructor(tocController) {
@@ -1104,11 +1424,40 @@ class MoreMenuController {
         this.isOpen = false;
         this.tocController = tocController;
         
+        // 全宽模式状态（默认关闭）
+        this.isFullWidth = false;
+        
+        // 小字号模式状态（默认关闭）
+        this.isSmallFont = false;
+        
+        // 字数统计元素
+        this.wordCountElement = document.getElementById('wordCount');
+        
+        // 编辑信息元素
+        this.lastEditorElement = document.getElementById('lastEditor');
+        this.lastEditTimeElement = document.getElementById('lastEditTime');
+        
         this.init();
     }
     
     init() {
         this.bindEvents();
+        this.initFullWidth();
+        this.initSmallFont();
+    }
+    
+    // 初始化全宽状态
+    initFullWidth() {
+        if (this.isFullWidth) {
+            document.body.classList.add('full-width');
+        }
+    }
+    
+    // 初始化小字号状态
+    initSmallFont() {
+        if (this.isSmallFont) {
+            document.body.classList.add('small-font');
+        }
     }
     
     bindEvents() {
@@ -1141,12 +1490,22 @@ class MoreMenuController {
             if (switchEl) {
                 switchEl.classList.toggle('on');
                 
-                // 检查是否是目录开关
+                // 检查是哪个功能开关
                 const label = menuItem.querySelector('.label');
-                if (label && label.textContent === '目录') {
-                    // 切换目录显示/隐藏
-                    if (this.tocController) {
-                        this.tocController.toggle();
+                if (label) {
+                    const labelText = label.textContent.trim();
+                    
+                    if (labelText === '目录') {
+                        // 切换目录显示/隐藏
+                        if (this.tocController) {
+                            this.tocController.toggle();
+                        }
+                    } else if (labelText === '全宽') {
+                        // 切换全宽模式
+                        this.toggleFullWidth();
+                    } else if (labelText === '小字号') {
+                        // 切换小字号模式
+                        this.toggleSmallFont();
                     }
                 }
             }
@@ -1181,6 +1540,49 @@ class MoreMenuController {
         // 更新按钮状态（可选）
         this.moreButton.setAttribute('aria-expanded', 'false');
     }
+    
+    // 切换全宽模式
+    toggleFullWidth() {
+        this.isFullWidth = !this.isFullWidth;
+        
+        if (this.isFullWidth) {
+            document.body.classList.add('full-width');
+        } else {
+            document.body.classList.remove('full-width');
+        }
+        
+        console.log('全宽模式:', this.isFullWidth ? '开启' : '关闭');
+    }
+    
+    // 切换小字号模式
+    toggleSmallFont() {
+        this.isSmallFont = !this.isSmallFont;
+        
+        if (this.isSmallFont) {
+            document.body.classList.add('small-font');
+        } else {
+            document.body.classList.remove('small-font');
+        }
+        
+        console.log('小字号模式:', this.isSmallFont ? '开启' : '关闭');
+    }
+    
+    // 更新字数统计
+    updateWordCount(count) {
+        if (this.wordCountElement) {
+            this.wordCountElement.textContent = `字数：${count.toLocaleString()} 个字`;
+        }
+    }
+    
+    // 更新编辑信息
+    updateEditInfo(author, editTime) {
+        if (this.lastEditorElement) {
+            this.lastEditorElement.textContent = `上次由 ${author || '--'} 编辑`;
+        }
+        if (this.lastEditTimeElement) {
+            this.lastEditTimeElement.textContent = editTime || '--';
+        }
+    }
 }
 
 // 页面加载完成后初始化
@@ -1189,12 +1591,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const tocController = new TOCController();
     const notebookLoader = new NotebookLoader(tocController);
     const moreMenuController = new MoreMenuController(tocController);
+    const pageMenuController = new PageMenuController(notebookLoader, sidebarController);
     
     // 将控制器实例暴露到全局，方便调试
     window.sidebarController = sidebarController;
     window.notebookLoader = notebookLoader;
     window.tocController = tocController;
     window.moreMenuController = moreMenuController;
+    window.pageMenuController = pageMenuController;
 });
 
 // 页面卸载时清理

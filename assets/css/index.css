@@ -238,41 +238,6 @@ body {
   min-width: 0;
 }
 
-.collapse-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 6px;
-  color: #5F5E5B;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  margin-left: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-}
-
-.collapse-btn:hover {
-  background-color: #F1F0EF;
-  color: #32302C;
-}
-
-.collapse-btn:active {
-  background-color: #E9E8E7;
-}
-
-.collapse-btn:focus {
-  outline: none;
-  box-shadow: none;
-}
-
-.collapse-btn .directional-icon {
-  transition: color 0.2s ease;
-}
 
 .sidebar-content {
   flex: 1;
@@ -413,6 +378,12 @@ body {
   flex-shrink: 0;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .breadcrumb-container {
   display: flex;
   align-items: center;
@@ -489,6 +460,90 @@ body {
   padding-right: calc(var(--toc-width) + var(--scrollbar-width));
 }
 
+/* 页面菜单按钮 */
+.page-menu-button {
+  user-select: none;
+  transition: background 20ms ease-in;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background-color: transparent;
+  padding: 0;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.page-menu-button:hover {
+  background-color: #F0EFED;
+}
+
+.page-menu-button:active {
+  background-color: #E8E6E2;
+}
+
+.page-menu-button svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  fill: #494840;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* 菜单图标和折叠图标的容器 */
+.page-menu-button .menu-icon,
+.page-menu-button .collapse-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.1s ease;
+}
+
+.page-menu-button .menu-icon {
+  opacity: 1;
+}
+
+.page-menu-button .collapse-icon {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.page-menu-button .collapse-icon svg {
+  transition: fill 0.2s ease;
+}
+
+/* 宽度 >= 660px 时，悬停显示折叠图标 */
+@media (min-width: 660px) {
+  .page-menu-button:hover .menu-icon {
+    opacity: 0;
+  }
+  
+  .page-menu-button:hover .collapse-icon {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* 宽度 < 660px 时，折叠图标始终隐藏 */
+@media (max-width: 659px) {
+  .page-menu-button .collapse-icon {
+    display: none !important;
+  }
+  
+  .page-menu-button .menu-icon {
+    opacity: 1 !important;
+  }
+}
+
 /* 更多按钮样式 */
 .more-button {
   user-select: none;
@@ -522,12 +577,107 @@ body {
   flex-shrink: 0;
 }
 
+/* 页面菜单按钮容器 */
+.page-menu-button-container {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
 /* 更多按钮容器 */
 .more-button-container {
   position: relative;
   flex-shrink: 0;
   display: flex;
   align-items: center;
+}
+
+/* 页面菜单 */
+.page-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  width: 240px;
+  max-height: 400px;
+  border-radius: 10px;
+  background: white;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 14px 28px -6px, 
+              rgba(0, 0, 0, 0.06) 0px 2px 4px -1px, 
+              rgba(84, 72, 49, 0.08) 0px 0px 0px 1px;
+  overflow: hidden;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.page-menu-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5F5E5B;
+  padding: 8px 12px 4px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.page-menu-body {
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.page-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 20ms ease-in;
+  color: #5F5E5B;
+  font-size: 14px;
+}
+
+.page-menu-item:hover {
+  background-color: #F1F0EF;
+}
+
+.page-menu-item.active {
+  background-color: #E9E8E7;
+  color: #32302C;
+}
+
+.page-menu-item-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.page-menu-item-icon svg,
+.page-menu-item-icon img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.page-menu-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 更多菜单 */
@@ -708,19 +858,19 @@ body {
   transition-delay: 0.5s;
 }
 
-/* 为折叠按钮定位tooltip - 显示在按钮下方中间 */
-.collapse-btn[data-tooltip]::before {
+/* 为页面菜单按钮定位tooltip - 显示在按钮下方左侧 */
+.page-menu-button[data-tooltip]::before {
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(6px);
+  left: 0;
+  transform: translateY(6px);
   margin-top: 2px;
 }
 
-.collapse-btn[data-tooltip]:hover::before {
-  transform: translateX(-50%) translateY(8px);
+.page-menu-button[data-tooltip]:hover::before {
+  transform: translateY(8px);
 }
 
-/* 为更多按钮定位tooltip - 显示在按钮下方左移 */
+/* 为更多按钮定位tooltip - 显示在按钮下方右侧 */
 .more-button[data-tooltip]::before {
   top: 100%;
   right: 0;
@@ -733,30 +883,9 @@ body {
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
-  .resize-handle {
-    display: none;
-  }
-  
-  .sidebar-clipper {
-    position: fixed;
-    left: 0;
-    top: 0;
-    z-index: 160;
-    height: 100vh;
-    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.2);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-  }
-  
-  .sidebar-clipper.mobile-open {
-    transform: translateX(0);
-  }
 
-  .main-content {
-    margin-left: 0;
-  }
-  
+/* 小于 1200px */
+@media (max-width: 1200px) {
   .content-header {
     padding: 0 15px;
   }
@@ -767,9 +896,8 @@ body {
 }
 
 @media (max-width: 480px) {
-  .sidebar-clipper {
-    width: 100vw;
-    max-width: 320px;
+  .breadcrumb-title {
+    max-width: calc(100vw - 80px);
   }
 }
 
@@ -857,6 +985,15 @@ body.more-lead article figure {
   cursor: pointer;
 }
 
+/* 全宽模式 - 通过给 body 添加 full-width 类来启用 */
+body.full-width .content-wrapper article {
+  max-width: 100% !important;
+}
+
+body.full-width .content-wrapper header > div.title {
+  max-width: 100% !important;
+}
+
 /* 目录侧边栏 - 固定在右侧 */
 .toc-sidebar {
   position: fixed;
@@ -941,7 +1078,7 @@ body.more-lead article figure {
   justify-content: center;
   fill: #707070;
   flex-shrink: 0;
-  margin-right: 2px;
+  margin-left: 2px;
 }
 
 .toggle-icon svg {
@@ -963,7 +1100,7 @@ body.more-lead article figure {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 6px 5px;
+  padding: 6px 4px;
   flex: 1;
 }
 
