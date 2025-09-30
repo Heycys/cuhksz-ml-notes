@@ -805,6 +805,9 @@ class NotebookLoader {
         // 更新笔记中的图标（如果配置了 Font Awesome 图标）
         this.updateNoteIcon();
 
+        // 更新浏览器标签页图标
+        this.updateFavicon();
+
         // 生成目录
         if (this.tocController) {
             this.tocController.generateTOC(this.contentContainer);
@@ -818,6 +821,149 @@ class NotebookLoader {
         if (contentWithToc) {
             contentWithToc.scrollTop = 0;
         }
+    }
+    
+    // 更新浏览器标签页图标
+    updateFavicon() {
+        if (!this.currentNotebook) return;
+        
+        // 获取当前笔记的图标
+        const displayIcon = this.notebookIcons.get(this.currentNotebook);
+        if (!displayIcon) return;
+        
+        // 查找或创建 favicon link 元素
+        let faviconLink = document.querySelector('link[rel="icon"]');
+        if (!faviconLink) {
+            faviconLink = document.createElement('link');
+            faviconLink.rel = 'icon';
+            document.head.appendChild(faviconLink);
+        }
+        
+        console.log('更新Favicon - 当前笔记:', this.currentNotebook);
+        console.log('图标内容:', displayIcon);
+        
+        // 根据图标类型设置 favicon（优先级：FA > SVG > img > emoji）
+        if (displayIcon.includes('<i class="fa-solid')) {
+            // Font Awesome 图标：渲染到 canvas
+            console.log('检测到Font Awesome图标');
+            this.setFaviconFromFontAwesome(faviconLink, displayIcon);
+        } else if (displayIcon.includes('<svg')) {
+            // SVG 图标：提取并转换为 data URI
+            console.log('检测到SVG图标');
+            this.setFaviconFromSVG(faviconLink, displayIcon);
+        } else if (displayIcon.includes('<img')) {
+            // img 标签：提取 src
+            console.log('检测到img图标');
+            const srcMatch = displayIcon.match(/src="([^"]+)"/);
+            if (srcMatch) {
+                faviconLink.href = srcMatch[1];
+            }
+        } else {
+            // Emoji 或纯文本：转换为 data URI
+            console.log('检测到Emoji/文本图标:', displayIcon);
+            this.setFaviconFromEmoji(faviconLink, displayIcon);
+        }
+        
+        console.log('Favicon已更新:', this.currentNotebook);
+    }
+    
+    // 从 SVG 设置 favicon
+    setFaviconFromSVG(faviconLink, svgString) {
+        // 提取 SVG 内容
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgString, 'text/html');
+        const svgElement = doc.querySelector('svg');
+        
+        if (svgElement) {
+            // 将 SVG 转换为 data URI
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const svgBase64 = btoa(unescape(encodeURIComponent(svgData)));
+            faviconLink.href = `data:image/svg+xml;base64,${svgBase64}`;
+        }
+    }
+    
+    // 从 Emoji 设置 favicon
+    setFaviconFromEmoji(faviconLink, emoji) {
+        // 创建一个 canvas 来绘制 emoji
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        
+        // 绘制 emoji
+        ctx.font = '48px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(emoji, 32, 32);
+        
+        // 转换为 data URI
+        faviconLink.href = canvas.toDataURL('image/png');
+    }
+    
+    // 从 Font Awesome 图标设置 favicon
+    setFaviconFromFontAwesome(faviconLink, iconHTML) {
+        // 专门匹配 <i> 标签的类名（而不是外层 span）
+        const iTagMatch = iconHTML.match(/<i\s+class="([^"]+)"/);
+        const colorMatch = iconHTML.match(/color:\s*([^;"]+)/);
+        
+        if (!iTagMatch) {
+            console.error('无法提取Font Awesome图标类名');
+            return;
+        }
+        
+        const iconClass = iTagMatch[1];
+        const color = colorMatch ? colorMatch[1] : '#000000';
+        
+        console.log('提取的图标类名:', iconClass);
+        console.log('提取的颜色:', color);
+        
+        // 创建临时元素来渲染图标
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.innerHTML = `<i class="${iconClass}" style="font-size: 48px; color: ${color};"></i>`;
+        document.body.appendChild(tempDiv);
+        
+        // 等待字体加载
+        setTimeout(() => {
+            const iconElement = tempDiv.querySelector('i');
+            
+            // 获取图标的 Unicode 字符
+            const computedStyle = window.getComputedStyle(iconElement, '::before');
+            const content = computedStyle.getPropertyValue('content');
+            
+            console.log('Font Awesome content值:', content);
+            
+            if (content && content !== 'none' && content !== '""') {
+                // 创建 canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                
+                // 设置字体和样式
+                ctx.font = '900 48px "Font Awesome 6 Free"';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = color;
+                
+                // 移除引号并绘制
+                const iconChar = content.replace(/["']/g, '');
+                console.log('绘制的字符:', iconChar, '字符码:', iconChar.charCodeAt(0));
+                ctx.fillText(iconChar, 32, 32);
+                
+                // 转换为 data URI
+                const dataURL = canvas.toDataURL('image/png');
+                faviconLink.href = dataURL;
+                console.log('Canvas已生成favicon');
+            } else {
+                console.warn('Font Awesome图标content为空，使用默认图标');
+                this.setFaviconFromEmoji(faviconLink, '📄');
+            }
+            
+            // 清理临时元素
+            document.body.removeChild(tempDiv);
+        }, 200); // 增加到200ms，确保字体加载
     }
     
     // 更新笔记中的图标
