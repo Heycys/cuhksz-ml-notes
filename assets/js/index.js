@@ -672,63 +672,26 @@ class NotebookLoader {
         }
     }
     
-    // 获取基础路径
-    getBasePath() {
-        // 从 <base> 标签获取基础路径
-        const baseElement = document.querySelector('base');
-        if (baseElement && baseElement.href) {
-            const baseURL = new URL(baseElement.href);
-            return baseURL.pathname;
-        }
-        // 如果没有 base 标签，返回根路径
-        return '/';
-    }
-    
     // 更新浏览器URL
     updateURL(notebookName) {
-        const basePath = this.getBasePath();
-        // 移除基础路径末尾的斜杠（如果有），然后添加笔记名
-        const cleanBasePath = basePath.replace(/\/$/, '');
-        const newPath = `${cleanBasePath}/${notebookName}`;
-        const currentPath = window.location.pathname;
+        const newURL = `?page=${encodeURIComponent(notebookName)}`;
+        const currentSearch = window.location.search;
         
-        // 只有路径不同时才更新
-        if (currentPath !== newPath) {
-            window.history.pushState({ notebook: notebookName }, '', newPath);
-            console.log('URL已更新:', newPath, '(基础路径:', basePath + ')');
+        // 只有参数不同时才更新
+        if (currentSearch !== newURL) {
+            window.history.pushState({ notebook: notebookName }, '', newURL);
+            console.log('URL已更新:', newURL);
         }
     }
     
     // 从URL加载笔记
     loadFromURL() {
-        // 检查是否有重定向参数（从404.html跳转过来）
+        // 从URL参数中获取笔记名
         const urlParams = new URLSearchParams(window.location.search);
-        const redirectPath = urlParams.get('redirect');
+        const notebookName = urlParams.get('page');
         
-        let pathname = window.location.pathname;
-        
-        // 如果有重定向参数，使用重定向的路径
-        if (redirectPath) {
-            pathname = redirectPath;
-            // 清除URL参数
-            window.history.replaceState(null, '', pathname);
-        }
-        
-        const basePath = this.getBasePath();
-        
-        // 提取笔记名称：移除基础路径
-        let notebookName = pathname;
-        if (pathname.startsWith(basePath)) {
-            notebookName = pathname.substring(basePath.length);
-        }
-        
-        // 移除开头和结尾的斜杠，并解码中文
-        notebookName = decodeURIComponent(notebookName.replace(/^\/|\/$/g, ''));
-        
-        console.log('从URL解析笔记名:', notebookName, '(pathname:', pathname, ', basePath:', basePath + ')');
-        
-        // 如果URL为空或为根路径或为 index.html，加载默认笔记
-        if (!notebookName || notebookName === '' || notebookName === 'index.html') {
+        // 如果没有page参数，加载默认笔记
+        if (!notebookName) {
             this.loadDefaultContent();
             return;
         }
