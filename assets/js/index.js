@@ -1,8 +1,20 @@
 // 侧栏交互功能实现
 class SidebarController {
     constructor() {
+        // DOM 元素（需要先获取，用于读取 CSS 变量）
+        this.appLayout = document.getElementById('appLayout');
+        this.sidebarContainer = document.getElementById('sidebarContainer');
+        this.sidebarClipper = document.getElementById('sidebarClipper');
+        this.collapseBtn = document.getElementById('collapseBtn');
+        this.resizeHandle = document.getElementById('resizeHandle');
+        this.mainContent = document.getElementById('mainContent');
+        
+        // 从 CSS 变量读取默认宽度
+        const rootStyles = getComputedStyle(document.documentElement);
+        const defaultWidth = parseInt(rootStyles.getPropertyValue('--sidebar-width')) || 280;
+        
         // 状态变量
-        this.sidebarWidth = 280;
+        this.sidebarWidth = defaultWidth;
         this.isResizing = false;
         this.isCollapsed = false;
         this.isAnimating = false;
@@ -16,14 +28,6 @@ class SidebarController {
         this.hideTimeout = null;
         this.checkPositionTimeout = null;
         this.lastPointer = { x: 0, y: 0 };
-        
-        // DOM 元素
-        this.appLayout = document.getElementById('appLayout');
-        this.sidebarContainer = document.getElementById('sidebarContainer');
-        this.sidebarClipper = document.getElementById('sidebarClipper');
-        this.collapseBtn = document.getElementById('collapseBtn');
-        this.resizeHandle = document.getElementById('resizeHandle');
-        this.mainContent = document.getElementById('mainContent');
         
         // 图标元素
         this.iconBackward = this.collapseBtn.querySelector('.icon-backward');
@@ -397,10 +401,12 @@ class SidebarController {
     }
     
     updateCollapseButton() {
-        // 更新按钮标题
-        this.collapseBtn.title = this.isCollapsed ? '展开侧栏' : '折叠侧栏';
+        // 延迟更新按钮提示文字，避免点击时内容闪变
+        setTimeout(() => {
+            this.collapseBtn.setAttribute('data-tooltip', this.isCollapsed ? '展开侧栏' : '折叠侧栏');
+        }, 150); // 等待tooltip消失动画完成
         
-        // 切换图标显示
+        // 立即切换图标显示
         if (this.isCollapsed) {
             this.iconBackward.style.display = 'none';
             this.iconForward.style.display = 'block';
@@ -432,25 +438,38 @@ class SidebarController {
 
 // 笔记加载器类 (最终修正版)
 class NotebookLoader {
-    constructor() {
+    constructor(tocController) {
         // 从HTML中读取笔记配置
         this.notebooks = window.NOTEBOOK_CONFIG || [];
         
         this.currentNotebook = null;
         this.contentContainer = document.querySelector('#mainContent .content-wrapper');
         
+        // 面包屑元素
+        this.breadcrumbIcon = document.getElementById('breadcrumbIcon');
+        this.breadcrumbTitle = document.getElementById('breadcrumbTitle');
+        
+        // 缓存图标，用于面包屑显示
+        this.notebookIcons = new Map();
+        
+        // 目录控制器
+        this.tocController = tocController;
+        
+        // 初始化图片查看器
+        this.initImageViewer();
+        
         // 初始化
         this.init();
     }
     
-    init() {
-        this.generateNavigationItems();
+    async init() {
+        await this.generateNavigationItems();
         this.bindNavigationEvents();
         this.loadDefaultContent();
     }
     
     // 动态生成导航列表
-    generateNavigationItems() {
+    async generateNavigationItems() {
         const pageTree = document.querySelector('.page-tree');
         if (!pageTree) return;
         
@@ -458,16 +477,32 @@ class NotebookLoader {
         pageTree.innerHTML = '';
         
         // 生成所有导航项（包括首页）
-        this.notebooks.forEach(notebook => {
+        for (const notebook of this.notebooks) {
+            let displayIcon = notebook.icon;
+            
+            // 如果图标设置为auto，自动获取HTML中的shortcut icon
+            if (notebook.icon === 'auto') {
+                displayIcon = await this.getAutoIcon(notebook.path);
+            }
+            
+            // 缓存图标，用于面包屑显示
+            this.notebookIcons.set(notebook.name, displayIcon);
+            
             const pageItem = document.createElement('div');
             pageItem.className = 'page-item';
+            
+            // 如果是emoji或文本图标（不包含HTML标签），添加间距
+            const iconWithSpacing = !displayIcon.includes('<') 
+                ? `<span style="margin-right: 4px; display: inline-block;">${displayIcon}</span>` 
+                : displayIcon;
+            
             pageItem.innerHTML = `
                 <div class="page-title" data-notebook="${notebook.name}" data-path="${notebook.path}">
-                    <span class="page-name">${notebook.icon} ${notebook.name}</span>
+                    <span class="page-name">${iconWithSpacing}${notebook.name}</span>
                 </div>
             `;
             pageTree.appendChild(pageItem);
-        });
+        }
     }
     
     // 绑定导航点击事件
@@ -490,7 +525,10 @@ class NotebookLoader {
             const notebookName = pageTitle.dataset.notebook;
             const notebookPath = pageTitle.dataset.path;
             
-            // 所有内容都通过动态加载
+            // 立即更新面包屑（从缓存中获取图标信息）
+            this.updateBreadcrumb(notebookName);
+            
+            // 然后加载内容
             await this.loadNotebook(notebookName, notebookPath);
         });
     }
@@ -585,16 +623,25 @@ class NotebookLoader {
         if (!this.contentContainer) return;
         this.contentContainer.innerHTML = content;
 
+        // 为新加载的图片添加点击事件
+        this.bindImageClickEvents();
+
+        // 生成目录
+        if (this.tocController) {
+            this.tocController.generateTOC(this.contentContainer);
+        }
+
         // 滚动到顶部
-        const mainContent = document.getElementById('mainContent');
-        if (mainContent) {
-            mainContent.scrollTop = 0;
+        const contentWithToc = document.querySelector('.content-with-toc');
+        if (contentWithToc) {
+            contentWithToc.scrollTop = 0;
         }
     }
     
     // 显示加载状态
     showLoadingState() {
         if (!this.contentContainer) return;
+        
         this.contentContainer.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: #5F5E5B;">
                 <div style="font-size: 48px; margin-bottom: 20px;">📖</div>
@@ -607,6 +654,7 @@ class NotebookLoader {
     // 显示错误状态
     showErrorState(message) {
         if (!this.contentContainer) return;
+        
         this.contentContainer.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: #dc3545;">
                 <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
@@ -625,17 +673,21 @@ class NotebookLoader {
         `;
     }
     
-    // 加载默认内容（首页）
+    // 加载默认内容（配置中的第一个项目）
     async loadDefaultContent() {
-        // 加载首页内容
-        const homePage = this.notebooks.find(notebook => notebook.name === '首页');
-        if (homePage) {
-            await this.loadNotebook(homePage.name, homePage.path);
+        // 加载第一个笔记作为默认内容
+        if (this.notebooks.length > 0) {
+            const defaultNotebook = this.notebooks[0];
             
-            // 设置首页为活跃状态
-            const homeTitle = document.querySelector(`[data-notebook="${homePage.name}"]`);
-            if (homeTitle) {
-                homeTitle.classList.add('active');
+            // 立即更新面包屑
+            this.updateBreadcrumb(defaultNotebook.name);
+            
+            await this.loadNotebook(defaultNotebook.name, defaultNotebook.path);
+            
+            // 设置第一个项目为活跃状态
+            const defaultTitle = document.querySelector(`[data-notebook="${defaultNotebook.name}"]`);
+            if (defaultTitle) {
+                defaultTitle.classList.add('active');
             }
         }
     }
@@ -645,21 +697,504 @@ class NotebookLoader {
         return this.currentNotebook;
     }
     
+    // 更新面包屑导航
+    updateBreadcrumb(notebookName) {
+        if (!this.breadcrumbIcon || !this.breadcrumbTitle) return;
+        
+        const displayIcon = this.notebookIcons.get(notebookName) || '📄';
+        
+        // 更新标题
+        this.breadcrumbTitle.textContent = notebookName;
+        
+        // 更新图标
+        if (displayIcon.includes('<')) {
+            // HTML图标（SVG或img）
+            this.breadcrumbIcon.innerHTML = displayIcon;
+        } else {
+            // emoji或文本图标
+            this.breadcrumbIcon.textContent = displayIcon;
+        }
+        
+        console.log('面包屑已更新:', notebookName);
+    }
+    
+    // 自动获取HTML文件中的shortcut icon作为图标
+    async getAutoIcon(notebookPath) {
+        try {
+            // 获取笔记名称，用于路径修正
+            const notebookName = notebookPath.split('/')[1]; // 从 pages/笔记名/文件.html 中提取笔记名
+            
+            const response = await fetch(notebookPath);
+            if (!response.ok) {
+                console.warn('无法获取HTML文件:', notebookPath);
+                return '📄'; // 默认图标
+            }
+            
+            const htmlContent = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+            
+            // 查找shortcut icon链接
+            const iconLink = doc.querySelector('link[rel="shortcut icon"]');
+            if (iconLink && iconLink.href) {
+                let iconPath = iconLink.getAttribute('href');
+                
+                // 修正路径：将相对路径转换为相对于主页面的路径
+                if (iconPath.startsWith('media/')) {
+                    iconPath = `pages/${notebookName}/${iconPath}`;
+                }
+                
+                // 如果是SVG文件，尝试内联显示
+                if (iconPath.endsWith('.svg')) {
+                    try {
+                        const svgResponse = await fetch(iconPath);
+                        if (svgResponse.ok) {
+                            const svgContent = await svgResponse.text();
+                            // 返回内联SVG，设置合适的大小和对齐方式
+                            const svgWithSize = svgContent.replace(
+                                '<svg',
+                                '<svg width="18" height="18" style="display: block;"'
+                            );
+                            return svgWithSize;
+                        }
+                    } catch (svgError) {
+                        console.warn('无法获取SVG内容:', iconPath, svgError);
+                    }
+                    
+                    // 如果内联失败，使用img标签
+                    return `<img src="${iconPath}" width="18" height="18" style="display: block;" alt="图标">`;
+                } else {
+                    // 非SVG文件使用img标签
+                    return `<img src="${iconPath}" width="18" height="18" style="display: block;" alt="图标">`;
+                }
+            }
+            
+            console.warn('未找到shortcut icon:', notebookPath);
+            return '📄'; // 默认图标
+            
+        } catch (error) {
+            console.error('获取auto图标失败:', notebookPath, error);
+            return '📄'; // 默认图标
+        }
+    }
+    
+    // 初始化图片查看器
+    initImageViewer() {
+        this.imageViewerModal = document.getElementById('imageViewerModal');
+        this.imageViewerContainer = document.getElementById('imageViewerContainer');
+        this.imageViewerImg = document.getElementById('imageViewerImg');
+        
+        // 缩放相关
+        this.currentScale = 1;
+        this.minScale = 0.1;
+        this.maxScale = 5;
+        
+        // 点击背景关闭
+        this.imageViewerModal.addEventListener('click', (e) => {
+            if (e.target === this.imageViewerModal || e.target === this.imageViewerContainer) {
+                this.hideImageViewer();
+            }
+        });
+        
+        // ESC键关闭
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.imageViewerModal.classList.contains('show')) {
+                this.hideImageViewer();
+            }
+        });
+        
+        // 滚轮缩放 - 绑定到整个模态窗口
+        this.imageViewerModal.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            this.handleImageZoom(e);
+        });
+    }
+    
+    // 为图片绑定点击事件
+    bindImageClickEvents() {
+        if (!this.contentContainer) return;
+        
+        const images = this.contentContainer.querySelectorAll('img');
+        images.forEach(img => {
+            img.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showImageViewer(img.src, img.alt || '图片');
+            });
+        });
+    }
+    
+    // 显示图片查看器
+    showImageViewer(imageSrc, imageAlt) {
+        if (!this.imageViewerModal || !this.imageViewerImg) return;
+        
+        // 重置缩放，确保变换原点固定在中心
+        this.currentScale = 1;
+        this.imageViewerImg.style.transform = 'scale(1)';
+        
+        this.imageViewerImg.src = imageSrc;
+        this.imageViewerImg.alt = imageAlt;
+        
+        // 等待图片加载完成后再显示，确保以原始尺寸显示
+        this.imageViewerImg.onload = () => {
+            this.imageViewerModal.classList.add('show');
+            // 防止页面滚动
+            document.body.style.overflow = 'hidden';
+            console.log('显示图片查看器:', imageSrc, '原始尺寸:', this.imageViewerImg.naturalWidth + 'x' + this.imageViewerImg.naturalHeight);
+        };
+    }
+    
+    // 隐藏图片查看器
+    hideImageViewer() {
+        if (!this.imageViewerModal) return;
+        
+        this.imageViewerModal.classList.remove('show');
+        
+        // 恢复页面滚动
+        document.body.style.overflow = '';
+        
+        // 重置缩放
+        this.currentScale = 1;
+        
+        // 清空图片源以释放内存
+        setTimeout(() => {
+            if (this.imageViewerImg) {
+                this.imageViewerImg.src = '';
+                this.imageViewerImg.style.transform = 'scale(1)';
+            }
+        }, 300);
+        
+        console.log('隐藏图片查看器');
+    }
+    
+    // 处理图片缩放
+    handleImageZoom(e) {
+        const zoomSpeed = 0.1;
+        const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+        
+        this.currentScale = Math.max(this.minScale, Math.min(this.maxScale, this.currentScale + delta));
+        
+        // 固定在中心位置缩放
+        this.imageViewerImg.style.transform = `scale(${this.currentScale})`;
+        
+        console.log('图片缩放:', this.currentScale);
+    }
+    
     // 清理资源
     destroy() {
         // 清理事件监听器等
+        if (this.imageViewerModal) {
+            this.imageViewerModal.remove();
+        }
         console.log('NotebookLoader已清理');
+    }
+}
+
+// 目录控制器类
+class TOCController {
+    constructor() {
+        this.tocSidebar = document.getElementById('tocSidebar');
+        this.tocBody = document.getElementById('tocBody');
+        this.contentWithToc = document.querySelector('.content-with-toc');
+        this.isVisible = false;
+        
+        this.init();
+    }
+    
+    init() {
+        // 默认隐藏目录
+        this.hide();
+    }
+    
+    // 显示目录
+    show() {
+        if (this.tocSidebar) {
+            this.tocSidebar.classList.add('show');
+            this.isVisible = true;
+        }
+        if (this.contentWithToc) {
+            this.contentWithToc.classList.add('toc-visible');
+        }
+    }
+    
+    // 隐藏目录
+    hide() {
+        if (this.tocSidebar) {
+            this.tocSidebar.classList.remove('show');
+            this.isVisible = false;
+        }
+        if (this.contentWithToc) {
+            this.contentWithToc.classList.remove('toc-visible');
+        }
+    }
+    
+    // 切换显示/隐藏
+    toggle() {
+        if (this.isVisible) {
+            this.hide();
+        } else {
+            this.show();
+        }
+    }
+    
+    // 生成目录
+    generateTOC(contentContainer) {
+        if (!this.tocBody || !contentContainer) return;
+        
+        // 清空现有目录
+        this.tocBody.innerHTML = '';
+        
+        // 查找所有标题元素（h1-h6）
+        const headings = contentContainer.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        
+        if (headings.length === 0) {
+            this.tocBody.innerHTML = '<div style="padding: 20px; text-align: center; color: #8E8E8E;">当前页面没有标题</div>';
+            return;
+        }
+        
+        // 为每个标题添加ID（如果没有）
+        headings.forEach((heading, index) => {
+            if (!heading.id) {
+                heading.id = `heading-${index}`;
+            }
+        });
+        
+        // 构建目录结构
+        const tocItems = [];
+        let minLevel = 6; // 初始化为最大级别
+        
+        headings.forEach((heading, index) => {
+            const level = parseInt(heading.tagName.substring(1)); // h1 -> 1, h2 -> 2, etc.
+            const text = heading.textContent.trim();
+            const id = heading.id;
+            
+            // 记录最小级别
+            if (level < minLevel) {
+                minLevel = level;
+            }
+            
+            tocItems.push({
+                level: level,
+                text: text,
+                id: id,
+                element: heading
+            });
+        });
+        
+        // 生成目录HTML，传入最小级别
+        this.renderTOCItems(tocItems, minLevel);
+        
+        // 绑定目录项点击事件
+        this.bindTOCItemEvents();
+        
+        // 绑定折叠图标点击事件
+        this.bindToggleIconEvents();
+    }
+    
+    // 渲染目录项
+    renderTOCItems(items, minLevel) {
+        const fragment = document.createDocumentFragment();
+        
+        items.forEach((item, index) => {
+            const tocItem = document.createElement('div');
+            // 使用相对级别计算缩进
+            const relativeLevel = item.level - minLevel + 1;
+            tocItem.className = `toc-item h${item.level}`;
+            tocItem.dataset.targetId = item.id;
+            tocItem.dataset.level = item.level;
+            
+            // 判断是否有子项
+            const hasChildren = this.hasChildItems(items, index);
+            
+            // 根据相对级别计算缩进
+            const indent = (relativeLevel - 1) * 14;
+            const paddingLeft = indent + 'px';
+            
+            // 判断是否是第一级（最小级别）
+            const isFirstLevel = relativeLevel === 1;
+            const fontWeight = isFirstLevel ? '600' : '400';
+            const color = isFirstLevel ? '#1A1A1A' : '#3C4248';
+            
+            tocItem.innerHTML = `
+                <span class="toggle-icon ${hasChildren ? '' : 'no-children'}">
+                    <svg aria-hidden="true" role="graphics-symbol" viewBox="0 0 12 12" style="width: 12px; height: 12px; display: block; fill: #707070; flex-shrink: 0;"><path d="M6.02734 8.80274C6.27148 8.80274 6.47168 8.71484 6.66211 8.51465L10.2803 4.82324C10.4268 4.67676 10.5 4.49609 10.5 4.28125C10.5 3.85156 10.1484 3.5 9.72363 3.5C9.50879 3.5 9.30859 3.58789 9.15234 3.74902L6.03223 6.9668L2.90722 3.74902C2.74609 3.58789 2.55078 3.5 2.33105 3.5C1.90137 3.5 1.55469 3.85156 1.55469 4.28125C1.55469 4.49609 1.62793 4.67676 1.77441 4.82324L5.39258 8.51465C5.58789 8.71973 5.78808 8.80274 6.02734 8.80274Z"></path></svg>
+                </span>
+                <span class="toc-text" style="font-weight: ${fontWeight}; color: ${color};">${item.text}</span>
+            `;
+            
+            // 设置动态缩进
+            tocItem.style.paddingLeft = paddingLeft;
+            
+            fragment.appendChild(tocItem);
+        });
+        
+        this.tocBody.appendChild(fragment);
+    }
+    
+    // 判断当前项是否有子项
+    hasChildItems(items, currentIndex) {
+        if (currentIndex >= items.length - 1) return false;
+        
+        const currentLevel = items[currentIndex].level;
+        const nextLevel = items[currentIndex + 1].level;
+        
+        return nextLevel > currentLevel;
+    }
+    
+    // 绑定目录项点击事件
+    bindTOCItemEvents() {
+        const tocItems = this.tocBody.querySelectorAll('.toc-item');
+        
+        tocItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                // 如果点击的是折叠图标，不执行滚动
+                if (e.target.closest('.toggle-icon')) return;
+                
+                const targetId = item.dataset.targetId;
+                const targetElement = document.getElementById(targetId);
+                
+                if (targetElement) {
+                    // 滚动到目标元素
+                    const contentWithToc = document.querySelector('.content-with-toc');
+                    if (contentWithToc) {
+                        const targetTop = targetElement.offsetTop;
+                        contentWithToc.scrollTo({
+                            top: targetTop - 70, // 留出一些顶部空间
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+        });
+    }
+    
+    // 绑定折叠图标点击事件
+    bindToggleIconEvents() {
+        const toggleIcons = this.tocBody.querySelectorAll('.toggle-icon');
+        
+        toggleIcons.forEach(icon => {
+            if (!icon.classList.contains('no-children')) {
+                icon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    
+                    icon.classList.toggle('collapsed');
+                    
+                    const parentItem = icon.closest('.toc-item');
+                    const parentLevel = parseInt(parentItem.dataset.level);
+                    let nextElement = parentItem.nextElementSibling;
+                    
+                    // 切换所有子项的显示/隐藏状态
+                    while (nextElement && nextElement.classList.contains('toc-item')) {
+                        const nextLevel = parseInt(nextElement.dataset.level);
+                        if (nextLevel <= parentLevel) break;
+                        
+                        nextElement.style.display = icon.classList.contains('collapsed') ? 'none' : 'flex';
+                        nextElement = nextElement.nextElementSibling;
+                    }
+                });
+            }
+        });
+    }
+}
+
+// 更多菜单控制器类
+class MoreMenuController {
+    constructor(tocController) {
+        this.moreButton = document.getElementById('moreButton');
+        this.moreMenu = document.getElementById('moreMenu');
+        this.isOpen = false;
+        this.tocController = tocController;
+        
+        this.init();
+    }
+    
+    init() {
+        this.bindEvents();
+    }
+    
+    bindEvents() {
+        // 更多按钮点击事件
+        this.moreButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleMenu();
+        });
+        
+        // 点击菜单外部关闭
+        document.addEventListener('click', (e) => {
+            if (this.isOpen && !this.moreMenu.contains(e.target) && !this.moreButton.contains(e.target)) {
+                this.hideMenu();
+            }
+        });
+        
+        // ESC键关闭菜单
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isOpen) {
+                this.hideMenu();
+            }
+        });
+        
+        // 菜单项开关切换
+        this.moreMenu.addEventListener('click', (e) => {
+            const menuItem = e.target.closest('.menu-item');
+            if (!menuItem) return;
+            
+            const switchEl = menuItem.querySelector('.switch-container');
+            if (switchEl) {
+                switchEl.classList.toggle('on');
+                
+                // 检查是否是目录开关
+                const label = menuItem.querySelector('.label');
+                if (label && label.textContent === '目录') {
+                    // 切换目录显示/隐藏
+                    if (this.tocController) {
+                        this.tocController.toggle();
+                    }
+                }
+            }
+        });
+        
+        // 阻止菜单内部点击事件冒泡
+        this.moreMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+    
+    toggleMenu() {
+        if (this.isOpen) {
+            this.hideMenu();
+        } else {
+            this.showMenu();
+        }
+    }
+    
+    showMenu() {
+        this.moreMenu.classList.add('show');
+        this.isOpen = true;
+        
+        // 更新按钮状态（可选）
+        this.moreButton.setAttribute('aria-expanded', 'true');
+    }
+    
+    hideMenu() {
+        this.moreMenu.classList.remove('show');
+        this.isOpen = false;
+        
+        // 更新按钮状态（可选）
+        this.moreButton.setAttribute('aria-expanded', 'false');
     }
 }
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
     const sidebarController = new SidebarController();
-    const notebookLoader = new NotebookLoader();
+    const tocController = new TOCController();
+    const notebookLoader = new NotebookLoader(tocController);
+    const moreMenuController = new MoreMenuController(tocController);
     
     // 将控制器实例暴露到全局，方便调试
     window.sidebarController = sidebarController;
     window.notebookLoader = notebookLoader;
+    window.tocController = tocController;
+    window.moreMenuController = moreMenuController;
 });
 
 // 页面卸载时清理

@@ -35,13 +35,19 @@ body {
   background: #94a3b8;
 }
 
+/* 全局变量 - 统一控制宽度 */
+:root {
+  --sidebar-width: 260px;  /* 侧边栏宽度 */
+  --toc-width: 260px;      /* 目录宽度 */
+  --scrollbar-width: 10px; /* 滚动条宽度 */
+}
+
 /* 应用布局 */
 .app-layout {
   display: flex;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  --sidebar-width: 280px;
 }
 
 /* 可调整大小的侧栏容器 */
@@ -66,7 +72,7 @@ body {
   overflow: hidden;            /* 负责裁剪上下边界 */
   width: var(--sidebar-width, 280px);
   display: flex;               /* 让 inner 撑满 */
-  transition: top 0.3s ease, bottom 0.3s ease, width 0.2s ease;
+  transition: top 0.2s ease, bottom 0.2s ease, width 0.2s ease;
 }
 
 /* ---------- 真正的侧栏 ---------- */
@@ -79,7 +85,7 @@ body {
   border-right: 2px solid #F0EFEE;  /* 侧栏右侧分界线：2px粗细，浅灰色 */
   position: relative;
   z-index: 1000;
-  transition: transform 0.3s ease, opacity 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease; /* 动画时间0.2s，透明度0.2s */
 }
 
 /* ---------- 遮挡片，盖住圆角 & 投影 ---------- */
@@ -149,7 +155,7 @@ body {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 280px; /* 默认位置，会被JavaScript动态更新 */
+  left: var(--sidebar-width); /* 默认位置，会被JavaScript动态更新 */
   flex-shrink: 0;
   z-index: 1002; /* 确保在侧栏上方 */
 }
@@ -213,6 +219,8 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
+  height: 50px;
+  box-sizing: border-box;
   border-bottom: 2px solid #F0EFEE;  /* 侧栏头部底部分界线：2px粗细，浅灰色 */
   background-color: #F9F8F7;
   min-width: 0;
@@ -296,13 +304,13 @@ body {
 }
 
 .page-item {
-  margin-bottom: 2px;
+  margin-bottom: 0px;
 }
 
 .page-title {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 6px 12px;
   margin: 2px 8px;
   cursor: pointer;
   color: #5F5E5B;
@@ -327,6 +335,15 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+}
+
+/* 确保所有类型的图标都正确对齐 */
+.page-name svg,
+.page-name img {
+  margin-right: 4px;
+  flex-shrink: 0;
 }
 
 .sidebar-footer {
@@ -364,8 +381,12 @@ body {
   margin-left: var(--sidebar-width, 280px);
   transition: margin-left 0.3s ease;
   flex: 1;
-  overflow-y: auto;
   background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  height: 100vh;
 }
 
 /* 当侧栏折叠状态时，移除左边距让内容占满 */
@@ -379,12 +400,336 @@ body {
   transition: none !important;
 }
 
+/* 主内容区顶栏 */
+.content-header {
+  height: 50px;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  border-bottom: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+
+.breadcrumb-container {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-button {
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #32302C;
+  transition: background-color 0.2s ease;
+}
+
+.breadcrumb-button:hover {
+  background-color: #F0EFED;
+}
+
+.breadcrumb-button:focus {
+  outline: none;
+}
+
+.breadcrumb-icon {
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 面包屑中的SVG和img图标样式 */
+.breadcrumb-icon svg,
+.breadcrumb-icon img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.breadcrumb-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* 内容和目录的容器 */
+.content-with-toc {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 0;
+}
+
 .content-wrapper {
   padding: 0;
   max-width: none;
   margin: 0;
   width: 100%;
-  min-height: calc(100vh - 80px);
+  overflow-y: visible;
+  background-color: #ffffff;
+  transition: padding-right 0.3s ease;
+}
+
+/* 当目录显示时，给内容添加右侧空间 */
+.content-with-toc.toc-visible .content-wrapper {
+  padding-right: calc(var(--toc-width) + var(--scrollbar-width));
+}
+
+/* 更多按钮样式 */
+.more-button {
+  user-select: none;
+  transition: background 20ms ease-in;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background-color: transparent;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.more-button:hover {
+  background-color: #F0EFED;
+}
+
+.more-button:active {
+  background-color: #E8E6E2;
+}
+
+.more-button svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  fill: #494840;
+  flex-shrink: 0;
+}
+
+/* 更多按钮容器 */
+.more-button-container {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* 更多菜单 */
+.more-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  width: 256px;
+  border-radius: 10px;
+  background: white;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 14px 28px -6px, 
+              rgba(0, 0, 0, 0.06) 0px 2px 4px -1px, 
+              rgba(84, 72, 49, 0.08) 0px 0px 0px 1px;
+  overflow: hidden;
+  padding: 8px 4px;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+}
+
+.more-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* 菜单选项组 */
+.more-menu .option-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* 菜单分割线 */
+.more-menu .divider {
+  position: relative;
+  height: 1px;
+  margin-top: 5px;
+  margin-bottom: 4px;
+}
+
+.more-menu .divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: rgba(55, 53, 47, 0.09);
+}
+
+/* 菜单项 */
+.more-menu .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 20ms ease-in;
+  color: rgb(55, 53, 47);
+  box-sizing: border-box;
+}
+
+.more-menu .menu-item:hover {
+  background-color: rgba(55, 53, 47, 0.08);
+}
+
+/* 菜单图标容器 */
+.more-menu .icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.more-menu .icon-container svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  fill: rgb(55, 53, 47);
+}
+
+/* 菜单标签 */
+.more-menu .label {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 滑动开关容器 */
+.more-menu .switch-container {
+  display: flex;
+  flex-shrink: 0;
+  height: 14px;
+  width: 26px;
+  border-radius: 44px;
+  padding: 2px;
+  box-sizing: content-box;
+  background: rgba(55, 53, 47, 0.16);
+  transition: background 150ms ease-out;
+}
+
+/* 滑动开关的圆形滑块 */
+.more-menu .switch-knob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 150ms ease-out;
+  transform: translateX(0px);
+}
+
+/* 开关开启状态 */
+.more-menu .switch-container.on {
+  background: rgb(35, 131, 226);
+}
+
+.more-menu .switch-container.on .switch-knob {
+  transform: translateX(12px);
+}
+
+/* 菜单底部 */
+.more-menu .menu-footer {
+  padding: 4px 8px 0px 8px;
+}
+
+.more-menu .footer-text {
+  font-size: 12px;
+  line-height: 16px;
+  color: rgb(168, 164, 156);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 自定义Tooltip样式 */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 1000;
+  background-color: rgb(44, 44, 43, 0.8);
+  color: rgb(240, 239, 237);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 5px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.1s ease, visibility 0.1s ease, transform 0.1s ease;
+  transition-delay: 0s;
+}
+
+[data-tooltip]:hover::before {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.5s;
+}
+
+/* 为折叠按钮定位tooltip - 显示在按钮下方中间 */
+.collapse-btn[data-tooltip]::before {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  margin-top: 2px;
+}
+
+.collapse-btn[data-tooltip]:hover::before {
+  transform: translateX(-50%) translateY(8px);
+}
+
+/* 为更多按钮定位tooltip - 显示在按钮下方左移 */
+.more-button[data-tooltip]::before {
+  top: 100%;
+  right: 0;
+  transform: translateY(6px);
+  margin-top: 2px;
+}
+
+.more-button[data-tooltip]:hover::before {
+  transform: translateY(8px);
 }
 
 /* 响应式设计 */
@@ -411,6 +756,14 @@ body {
   .main-content {
     margin-left: 0;
   }
+  
+  .content-header {
+    padding: 0 15px;
+  }
+  
+  .breadcrumb-title {
+    max-width: calc(100vw - 100px);
+  }
 }
 
 @media (max-width: 480px) {
@@ -420,11 +773,198 @@ body {
   }
 }
 
+
+
+/* --- 覆盖 wolai.css 的设置 --- */
+
 /* 全局图片渲染优化 */
-img {
+article figure > img {
   /* 优先使用此属性，指示浏览器优化对比度，保持锐利 */
   image-rendering: -webkit-optimize-contrast;
   
   /* 这是标准属性，让浏览器在缩放时保持硬边缘，不做平滑处理 */
   image-rendering: crisp-edges;
 }
+
+/* 实现图片居中 */
+article figure {
+  /* 设置上下边距，并将左右边距设为 auto 来实现图片居中 */
+  margin: 4px auto;
+}
+
+body.less-lead article figure {
+  margin: 2px auto;
+}
+
+body.more-lead article figure {
+  margin: 6px auto;
+}
+
+/* 图片查看器模态窗口 */
+.image-viewer-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  overflow: hidden;
+}
+
+.image-viewer-modal.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.image-viewer-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.image-viewer-img {
+  display: block;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s ease;
+  cursor: grab;
+  /* 确保图片以实际像素大小显示，不被容器约束 */
+  max-width: none;
+  max-height: none;
+  width: auto;
+  height: auto;
+  /* 固定变换原点为图片中心 */
+  transform-origin: center center;
+}
+
+.image-viewer-img:active {
+  cursor: grabbing;
+}
+
+/* 笔记中的图片可点击提示 */
+.content-wrapper img {
+  cursor: pointer;
+}
+
+/* 目录侧边栏 - 固定在右侧 */
+.toc-sidebar {
+  position: fixed;
+  top: 50px; /* 与 content-header 的高度对齐 */
+  right: 0;
+  width: 0;
+  height: calc(100vh - 50px);
+  background-color: #FFFFFF;
+  border-left: 1px solid transparent;
+  overflow: hidden;
+  transition: width 0.3s ease, border-color 0.3s ease, right 0.3s ease;
+  z-index: 100;
+}
+
+.toc-sidebar.show {
+  width: var(--toc-width);
+  right: var(--scrollbar-width); /* 留出滚动条空间 */
+  border-left: 1px solid #EAEAEA;
+}
+
+/* 目录主容器 */
+.toc-container {
+  width: var(--toc-width);
+  background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* 目录头部 */
+.toc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #EAEAEA;
+  flex-shrink: 0;
+}
+
+.toc-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.toc-header-icon svg {
+  display: block;
+  fill: #8E8E8E;
+}
+
+/* 目录内容区域 */
+.toc-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 4px;
+}
+
+/* 目录项 */
+.toc-item {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  color: #3C4248;
+}
+
+.toc-item:hover {
+  background-color: #F5F5F5;
+}
+
+/* 标题级别样式 - 缩进由JavaScript动态设置 */
+
+/* 折叠图标 */
+.toggle-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  fill: #707070;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.toggle-icon svg {
+  transition: transform 0.2s ease;
+  transform: rotate(0deg);
+}
+
+.toggle-icon.collapsed svg {
+  transform: rotate(-90deg);
+}
+
+/* 隐藏没有子项的折叠图标 */
+.toggle-icon.no-children {
+  visibility: hidden;
+}
+
+/* 目录项文本 */
+.toc-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 6px 5px;
+  flex: 1;
+}
+
+
