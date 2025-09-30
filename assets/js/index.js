@@ -520,7 +520,29 @@ class NotebookLoader {
     async init() {
         await this.generateNavigationItems();
         this.bindNavigationEvents();
-        this.loadDefaultContent();
+        
+        // 初始化浏览器后退/前进按钮支持
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.notebook) {
+                const notebook = this.notebooks.find(nb => nb.name === event.state.notebook);
+                if (notebook) {
+                    this.updateBreadcrumb(notebook.name);
+                    this.loadNotebook(notebook.name, notebook.path, false);
+                    
+                    // 更新侧边栏激活状态
+                    document.querySelectorAll('.page-title.active').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    const pageTitle = document.querySelector(`[data-notebook="${notebook.name}"]`);
+                    if (pageTitle) {
+                        pageTitle.classList.add('active');
+                    }
+                }
+            }
+        });
+        
+        // 根据URL加载笔记，如果URL为空则加载默认内容
+        this.loadFromURL();
     }
     
     // 动态生成导航列表
@@ -539,6 +561,10 @@ class NotebookLoader {
             if (notebook.icon === 'auto') {
                 displayIcon = await this.getAutoIcon(notebook.path);
             }
+            // 如果是 Font Awesome 图标名称
+            else if (this.isFontAwesomeIcon(notebook.icon)) {
+                displayIcon = this.createFontAwesomeIcon(notebook.icon, notebook.color);
+            }
             
             // 缓存图标，用于面包屑显示
             this.notebookIcons.set(notebook.name, displayIcon);
@@ -546,18 +572,36 @@ class NotebookLoader {
             const pageItem = document.createElement('div');
             pageItem.className = 'page-item';
             
-            // 如果是emoji或文本图标（不包含HTML标签），添加间距
-            const iconWithSpacing = !displayIcon.includes('<') 
-                ? `<span style="margin-right: 4px; display: inline-block;">${displayIcon}</span>` 
-                : displayIcon;
+            // 包装图标到统一容器
+            let iconHTML;
+            if (displayIcon.includes('<')) {
+                // HTML图标（SVG、Font Awesome等）直接使用
+                iconHTML = displayIcon;
+            } else {
+                // Emoji或文本图标，包装到容器中
+                iconHTML = `<span class="icon-container">${displayIcon}</span>`;
+            }
             
             pageItem.innerHTML = `
                 <div class="page-title" data-notebook="${notebook.name}" data-path="${notebook.path}">
-                    <span class="page-name">${iconWithSpacing}${notebook.name}</span>
+                    <span class="page-name">${iconHTML}${notebook.name}</span>
                 </div>
             `;
             pageTree.appendChild(pageItem);
         }
+    }
+    
+    // 判断是否是有效的 Font Awesome 图标名称
+    isFontAwesomeIcon(icon) {
+        if (typeof icon !== 'string' || icon === 'auto') return false;
+        // Font Awesome 图标名称只包含小写字母、数字和连字符
+        return /^[a-z0-9\-]+$/.test(icon);
+    }
+    
+    // 创建 Font Awesome 图标
+    createFontAwesomeIcon(iconName, color) {
+        const colorStyle = color ? ` style="color: ${color};"` : '';
+        return `<span class="icon-container"><i class="fa-solid fa-${iconName}"${colorStyle}></i></span>`;
     }
     
     // 绑定导航点击事件
@@ -589,7 +633,7 @@ class NotebookLoader {
     }
     
     // 加载内容（包括首页和笔记）
-    async loadNotebook(notebookName, notebookPath) {
+    async loadNotebook(notebookName, notebookPath, updateURL = true) {
         try {
             // 显示加载状态
             this.showLoadingState();
@@ -606,17 +650,78 @@ class NotebookLoader {
             
             // 解析HTML内容
             const processedContent = this.parseAndProcessHTML(htmlContent, notebookName);
+            
+            // 先更新当前笔记名称（在插入内容之前）
+            this.currentNotebook = notebookName;
+            
             // 将内容插入到主内容区
             this.insertContent(processedContent);
             
             // 更新编辑信息
             this.updateNotebookInfo(notebookName);
             
-            this.currentNotebook = notebookName;
+            // 更新URL（如果需要）
+            if (updateURL) {
+                this.updateURL(notebookName);
+            }
+            
             console.log(`内容 ${notebookName} 加载完成`);
         } catch (error) {
             console.error('加载内容失败:', error);
             this.showErrorState(error.message);
+        }
+    }
+    
+    // 更新浏览器URL
+    updateURL(notebookName) {
+        const newPath = `/${notebookName}`;
+        const currentPath = window.location.pathname;
+        
+        // 只有路径不同时才更新
+        if (currentPath !== newPath) {
+            window.history.pushState({ notebook: notebookName }, '', newPath);
+            console.log('URL已更新:', newPath);
+        }
+    }
+    
+    // 从URL加载笔记
+    loadFromURL() {
+        const pathname = window.location.pathname;
+        
+        // 移除开头和结尾的斜杠
+        const notebookName = decodeURIComponent(pathname.replace(/^\/|\/$/g, ''));
+        
+        // 如果URL为空或为根路径，加载默认笔记
+        if (!notebookName || notebookName === '') {
+            this.loadDefaultContent();
+            return;
+        }
+        
+        // 查找对应的笔记配置
+        const notebook = this.notebooks.find(nb => nb.name === notebookName);
+        
+        if (notebook) {
+            console.log('从URL加载笔记:', notebookName);
+            
+            // 立即更新面包屑
+            this.updateBreadcrumb(notebook.name);
+            
+            // 加载笔记（不更新URL，避免重复）
+            this.loadNotebook(notebook.name, notebook.path, false);
+            
+            // 设置侧边栏激活状态
+            setTimeout(() => {
+                const pageTitle = document.querySelector(`[data-notebook="${notebook.name}"]`);
+                if (pageTitle) {
+                    document.querySelectorAll('.page-title.active').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    pageTitle.classList.add('active');
+                }
+            }, 100);
+        } else {
+            console.warn('URL中的笔记未找到:', notebookName, '加载默认内容');
+            this.loadDefaultContent();
         }
     }
     
@@ -698,6 +803,9 @@ class NotebookLoader {
         // 为新加载的图片添加点击事件
         this.bindImageClickEvents();
 
+        // 更新笔记中的图标（如果配置了 Font Awesome 图标）
+        this.updateNoteIcon();
+
         // 生成目录
         if (this.tocController) {
             this.tocController.generateTOC(this.contentContainer);
@@ -710,6 +818,36 @@ class NotebookLoader {
         const contentWithToc = document.querySelector('.content-with-toc');
         if (contentWithToc) {
             contentWithToc.scrollTop = 0;
+        }
+    }
+    
+    // 更新笔记中的图标
+    updateNoteIcon() {
+        if (!this.currentNotebook) return;
+        
+        // 查找当前笔记的配置
+        const notebook = this.notebooks.find(nb => nb.name === this.currentNotebook);
+        if (!notebook) return;
+        
+        // 只处理 Font Awesome 图标
+        if (this.isFontAwesomeIcon(notebook.icon)) {
+            // 查找笔记中的图标元素
+            const iconElement = this.contentContainer.querySelector('.icon');
+            if (iconElement) {
+                // 创建 Font Awesome 图标
+                const faIcon = document.createElement('i');
+                faIcon.className = `fa-solid fa-${notebook.icon}`;
+                faIcon.style.fontSize = '66px'; // 匹配 wolai.css 中的图标大小
+                if (notebook.color) {
+                    faIcon.style.color = notebook.color;
+                }
+                
+                // 清空原有内容并插入新图标
+                iconElement.innerHTML = '';
+                iconElement.appendChild(faIcon);
+                
+                console.log(`已更新笔记图标: ${notebook.icon}`);
+            }
         }
     }
     
@@ -1048,6 +1186,19 @@ class TOCController {
                 this.toggleTOC();
             });
         }
+        
+        // 点击目录外部区域关闭目录（仅移动端）
+        document.addEventListener('click', (e) => {
+            const width = window.innerWidth;
+            if (width < MOBILE_BREAKPOINT && this.isVisible) {
+                // 检查点击是否在目录外部
+                if (this.tocSidebar && 
+                    !this.tocSidebar.contains(e.target) && 
+                    !this.mobileTocButton.contains(e.target)) {
+                    this.hide();
+                }
+            }
+        });
     }
     
     // 切换目录显示/隐藏（不影响悬浮按钮）
@@ -1065,18 +1216,27 @@ class TOCController {
         const wasMobile = this.lastWidth !== undefined && this.lastWidth < MOBILE_BREAKPOINT;
         const isMobile = width < MOBILE_BREAKPOINT;
         
-        // 从桌面端变成移动端时，自动关闭目录（但保持悬浮按钮显示）
-        if (isMobile && this.isVisible) {
-            console.log(`窗口宽度 < ${MOBILE_BREAKPOINT}px，移动端模式：关闭目录`);
+        // 从桌面端变成移动端时
+        if (!wasMobile && isMobile) {
+            console.log(`窗口宽度 < ${MOBILE_BREAKPOINT}px，切换到移动端模式`);
+            // 关闭目录
             this.hide();
-            // 确保悬浮按钮显示（如果菜单开关是开启的）
-            if (this.mobileTocButton && !this.mobileTocButton.classList.contains('hidden')) {
-                this.mobileTocButton.classList.remove('hidden');
+            
+            // 根据菜单开关状态决定是否显示悬浮按钮
+            const switchState = this.getMenuSwitchState();
+            if (this.mobileTocButton) {
+                if (switchState) {
+                    // 开关开启，显示悬浮按钮
+                    this.mobileTocButton.classList.remove('hidden');
+                } else {
+                    // 开关关闭，隐藏悬浮按钮
+                    this.mobileTocButton.classList.add('hidden');
+                }
             }
         }
         // 从移动端变成桌面端时，根据菜单开关状态决定是否显示目录
         else if (wasMobile && !isMobile) {
-            console.log(`窗口宽度 >= ${MOBILE_BREAKPOINT}px，桌面端模式`);
+            console.log(`窗口宽度 >= ${MOBILE_BREAKPOINT}px，切换到桌面端模式`);
             // 检查菜单开关状态
             const switchState = this.getMenuSwitchState();
             if (switchState) {

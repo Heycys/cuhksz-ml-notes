@@ -312,11 +312,28 @@ body {
   align-items: center;
 }
 
+/* 图标容器 - 统一所有图标的尺寸和对齐 */
+.icon-container {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+  flex-shrink: 0;
+  font-size: 16px; /* emoji 和 Font Awesome 图标的默认大小 */
+}
+
 /* 确保所有类型的图标都正确对齐 */
 .page-name svg,
 .page-name img {
   margin-right: 4px;
   flex-shrink: 0;
+}
+
+/* Font Awesome 图标在容器中的样式 */
+.icon-container i {
+  font-size: inherit;
 }
 
 .sidebar-footer {
@@ -343,10 +360,27 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .new-page-btn:hover {
   background-color: #5F5E5B;
+}
+
+.new-page-btn svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.new-page-btn span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 主内容区 */
@@ -429,12 +463,27 @@ body {
   justify-content: center;
 }
 
+/* 面包屑中的图标容器 */
+.breadcrumb-icon .icon-container {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0;
+}
+
 /* 面包屑中的SVG和img图标样式 */
 .breadcrumb-icon svg,
 .breadcrumb-icon img {
   width: 18px;
   height: 18px;
   display: block;
+}
+
+/* 面包屑中的Font Awesome图标 */
+.breadcrumb-icon i {
+  font-size: 16px;
 }
 
 .breadcrumb-title {
@@ -1078,10 +1127,21 @@ body.full-width .content-wrapper header > div.title {
 
 /* 移动端目录浮动模式 */
 @media (max-width: 760px) {
+  .toc-sidebar {
+    top: 50px; /* 从顶栏下方开始 */
+    height: calc(100vh - 50px - 50px); /* 下方留出50px空隙 */
+  }
+  
   .toc-sidebar.show {
     width: 280px;
     right: 0; /* 移动端不留滚动条空间 */
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    border-radius: 12px 0 0 12px; /* 左侧上下圆角 */
+  }
+  
+  /* 移动端隐藏目录头部，节省空间 */
+  .toc-sidebar .toc-header {
+    display: none;
   }
   
   /* 移动端目录不挤压内容 */
@@ -1112,7 +1172,7 @@ body.full-width .content-wrapper header > div.title {
 
 .toc-title {
   font-size: 14px;
-  color: #333;
+  color: #8E8E8E;
 }
 
 .toc-header-icon svg {
