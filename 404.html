@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <script>
+        // GitHub Pages 单页应用路由处理
+        // 当用户直接访问 /cuhksz-ml-notes/线性回归 时，重定向到主页并保留路径
+        const basePath = '/cuhksz-ml-notes/';
+        const pathname = window.location.pathname;
+        
+        // 如果路径以基础路径开头，保留完整路径
+        if (pathname.startsWith(basePath)) {
+            const targetPath = pathname;
+            window.location.replace(basePath + 'index.html' + '?redirect=' + encodeURIComponent(pathname));
+        } else {
+            // 否则重定向到主页
+            window.location.replace(basePath);
+        }
+    </script>
+</head>
+<body>
+    <p>正在跳转...</p>
+</body>
+</html>
+

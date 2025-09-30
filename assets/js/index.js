@@ -672,27 +672,63 @@ class NotebookLoader {
         }
     }
     
+    // 获取基础路径
+    getBasePath() {
+        // 从 <base> 标签获取基础路径
+        const baseElement = document.querySelector('base');
+        if (baseElement && baseElement.href) {
+            const baseURL = new URL(baseElement.href);
+            return baseURL.pathname;
+        }
+        // 如果没有 base 标签，返回根路径
+        return '/';
+    }
+    
     // 更新浏览器URL
     updateURL(notebookName) {
-        const newPath = `/${notebookName}`;
+        const basePath = this.getBasePath();
+        // 移除基础路径末尾的斜杠（如果有），然后添加笔记名
+        const cleanBasePath = basePath.replace(/\/$/, '');
+        const newPath = `${cleanBasePath}/${notebookName}`;
         const currentPath = window.location.pathname;
         
         // 只有路径不同时才更新
         if (currentPath !== newPath) {
             window.history.pushState({ notebook: notebookName }, '', newPath);
-            console.log('URL已更新:', newPath);
+            console.log('URL已更新:', newPath, '(基础路径:', basePath + ')');
         }
     }
     
     // 从URL加载笔记
     loadFromURL() {
-        const pathname = window.location.pathname;
+        // 检查是否有重定向参数（从404.html跳转过来）
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectPath = urlParams.get('redirect');
         
-        // 移除开头和结尾的斜杠
-        const notebookName = decodeURIComponent(pathname.replace(/^\/|\/$/g, ''));
+        let pathname = window.location.pathname;
         
-        // 如果URL为空或为根路径，加载默认笔记
-        if (!notebookName || notebookName === '') {
+        // 如果有重定向参数，使用重定向的路径
+        if (redirectPath) {
+            pathname = redirectPath;
+            // 清除URL参数
+            window.history.replaceState(null, '', pathname);
+        }
+        
+        const basePath = this.getBasePath();
+        
+        // 提取笔记名称：移除基础路径
+        let notebookName = pathname;
+        if (pathname.startsWith(basePath)) {
+            notebookName = pathname.substring(basePath.length);
+        }
+        
+        // 移除开头和结尾的斜杠，并解码中文
+        notebookName = decodeURIComponent(notebookName.replace(/^\/|\/$/g, ''));
+        
+        console.log('从URL解析笔记名:', notebookName, '(pathname:', pathname, ', basePath:', basePath + ')');
+        
+        // 如果URL为空或为根路径或为 index.html，加载默认笔记
+        if (!notebookName || notebookName === '' || notebookName === 'index.html') {
             this.loadDefaultContent();
             return;
         }
