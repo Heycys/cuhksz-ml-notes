@@ -1029,10 +1029,12 @@ class NotebookLoader {
         if (!this.contentContainer) return;
         
         this.contentContainer.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #5F5E5B;">
-                <div style="font-size: 48px; margin-bottom: 20px;">📖</div>
-                <h2 style="color: #32302C; margin-bottom: 10px;">正在加载内容...</h2>
-                <p>请稍等片刻</p>
+            <div style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 100px);">
+                <div style="text-align: center; color: #5F5E5B;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">📖</div>
+                    <h2 style="color: #32302C; margin-bottom: 10px;">正在加载内容...</h2>
+                    <p>请稍等片刻</p>
+                </div>
             </div>
         `;
     }
@@ -1042,19 +1044,21 @@ class NotebookLoader {
         if (!this.contentContainer) return;
         
         this.contentContainer.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #dc3545;">
-                <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
-                <h2 style="color: #dc3545; margin-bottom: 10px;">加载失败</h2>
-                <p>${message}</p>
-                <button onclick="location.reload()" style="
-                    margin-top: 20px; 
-                    padding: 10px 20px; 
-                    background: #32302C; 
-                    color: white; 
-                    border: none; 
-                    border-radius: 6px; 
-                    cursor: pointer;
-                ">重新加载页面</button>
+            <div style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 100px);">
+                <div style="text-align: center; color: #dc3545;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
+                    <h2 style="color: #dc3545; margin-bottom: 10px;">加载失败</h2>
+                    <p>${message}</p>
+                    <button onclick="location.reload()" style="
+                        margin-top: 20px; 
+                        padding: 10px 20px; 
+                        background: #32302C; 
+                        color: white; 
+                        border: none; 
+                        border-radius: 6px; 
+                        cursor: pointer;
+                    ">重新加载页面</button>
+                </div>
             </div>
         `;
     }
@@ -1175,6 +1179,10 @@ class NotebookLoader {
         this.minScale = 0.1;
         this.maxScale = 5;
         
+        // 触摸缩放相关
+        this.initialDistance = 0;
+        this.initialScale = 1;
+        
         // 点击背景关闭
         this.imageViewerModal.addEventListener('click', (e) => {
             if (e.target === this.imageViewerModal || e.target === this.imageViewerContainer) {
@@ -1189,10 +1197,31 @@ class NotebookLoader {
             }
         });
         
-        // 滚轮缩放 - 绑定到整个模态窗口
+        // 滚轮缩放 - 绑定到整个模态窗口（桌面端）
         this.imageViewerModal.addEventListener('wheel', (e) => {
             e.preventDefault();
             this.handleImageZoom(e);
+        });
+        
+        // 触摸缩放 - 移动端双指缩放
+        this.imageViewerModal.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                this.handleTouchStart(e);
+            }
+        });
+        
+        this.imageViewerModal.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                this.handleTouchMove(e);
+            }
+        });
+        
+        this.imageViewerModal.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                this.handleTouchEnd();
+            }
         });
     }
     
@@ -1252,7 +1281,7 @@ class NotebookLoader {
         console.log('隐藏图片查看器');
     }
     
-    // 处理图片缩放
+    // 处理图片缩放（滚轮）
     handleImageZoom(e) {
         const zoomSpeed = 0.1;
         const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
@@ -1263,6 +1292,42 @@ class NotebookLoader {
         this.imageViewerImg.style.transform = `scale(${this.currentScale})`;
         
         console.log('图片缩放:', this.currentScale);
+    }
+    
+    // 计算两指之间的距离
+    getTouchDistance(touch1, touch2) {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    // 处理触摸开始
+    handleTouchStart(e) {
+        if (e.touches.length === 2) {
+            this.initialDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+            this.initialScale = this.currentScale;
+            console.log('双指缩放开始 - 初始距离:', this.initialDistance, '初始缩放:', this.initialScale);
+        }
+    }
+    
+    // 处理触摸移动
+    handleTouchMove(e) {
+        if (e.touches.length === 2 && this.initialDistance > 0) {
+            const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+            const scale = (currentDistance / this.initialDistance) * this.initialScale;
+            
+            // 限制缩放范围
+            this.currentScale = Math.max(this.minScale, Math.min(this.maxScale, scale));
+            
+            // 应用缩放
+            this.imageViewerImg.style.transform = `scale(${this.currentScale})`;
+        }
+    }
+    
+    // 处理触摸结束
+    handleTouchEnd() {
+        this.initialDistance = 0;
+        console.log('双指缩放结束 - 最终缩放:', this.currentScale);
     }
     
     // 清理资源

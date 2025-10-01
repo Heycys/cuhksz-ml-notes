@@ -998,6 +998,35 @@ body.more-lead article figure {
   margin: 6px auto;
 }
 
+/* 移动端：图片和公式支持横向滚动 */
+@media (max-width: 760px) {
+  /* 图片容器支持横向滚动 */
+  article figure {
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+  }
+  
+  /* 公式支持横向滚动 */
+  span.katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: block;
+    max-width: 100%;
+  }
+  
+  /* 代码块支持横向滚动 */
+  div.wolai-pre {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  
+  /* 移动端隐藏所有tooltip提示 */
+  [data-tooltip]::before {
+    display: none !important;
+  }
+}
+
 /* 图片查看器模态窗口 */
 .image-viewer-modal {
   position: fixed;
@@ -1037,13 +1066,15 @@ body.more-lead article figure {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: transform 0.1s ease;
   cursor: grab;
-  /* 确保图片以实际像素大小显示，不被容器约束 */
-  max-width: none;
-  max-height: none;
+  /* 桌面端：以实际大小显示，移动端：适应屏幕 */
+  max-width: 100%;
+  max-height: 100%;
   width: auto;
   height: auto;
   /* 固定变换原点为图片中心 */
   transform-origin: center center;
+  /* 防止图片过小时被拉伸 */
+  object-fit: contain;
 }
 
 .image-viewer-img:active {
