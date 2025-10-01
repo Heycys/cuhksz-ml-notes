@@ -151,10 +151,10 @@ class SidebarController {
                     // 【延迟时间2】鼠标在识别区域（左侧20px）停留多久后显示侧栏
                     this.hoverTimeout = setTimeout(() => {
                         // 停留超过设定时间，显示侧栏
-                        this.setShowSidebar(true);
-                        if (this.hideTimeout) {
-                            clearTimeout(this.hideTimeout);
-                            this.hideTimeout = null;
+            this.setShowSidebar(true);
+            if (this.hideTimeout) {
+                clearTimeout(this.hideTimeout);
+                this.hideTimeout = null;
                         }
                         this.hoverTimeout = null;
                     }, 300); // 300ms (0.3秒)
@@ -1031,9 +1031,9 @@ class NotebookLoader {
         this.contentContainer.innerHTML = `
             <div style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 100px);">
                 <div style="text-align: center; color: #5F5E5B;">
-                    <div style="font-size: 48px; margin-bottom: 20px;">📖</div>
-                    <h2 style="color: #32302C; margin-bottom: 10px;">正在加载内容...</h2>
-                    <p>请稍等片刻</p>
+                <div style="font-size: 48px; margin-bottom: 20px;">📖</div>
+                <h2 style="color: #32302C; margin-bottom: 10px;">正在加载内容...</h2>
+                <p>请稍等片刻</p>
                 </div>
             </div>
         `;
@@ -1046,18 +1046,18 @@ class NotebookLoader {
         this.contentContainer.innerHTML = `
             <div style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 100px);">
                 <div style="text-align: center; color: #dc3545;">
-                    <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
-                    <h2 style="color: #dc3545; margin-bottom: 10px;">加载失败</h2>
-                    <p>${message}</p>
-                    <button onclick="location.reload()" style="
-                        margin-top: 20px; 
-                        padding: 10px 20px; 
-                        background: #32302C; 
-                        color: white; 
-                        border: none; 
-                        border-radius: 6px; 
-                        cursor: pointer;
-                    ">重新加载页面</button>
+                <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
+                <h2 style="color: #dc3545; margin-bottom: 10px;">加载失败</h2>
+                <p>${message}</p>
+                <button onclick="location.reload()" style="
+                    margin-top: 20px; 
+                    padding: 10px 20px; 
+                    background: #32302C; 
+                    color: white; 
+                    border: none; 
+                    border-radius: 6px; 
+                    cursor: pointer;
+                ">重新加载页面</button>
                 </div>
             </div>
         `;
@@ -1590,6 +1590,9 @@ class TOCController {
             });
         });
         
+        // 保存标题元素数组，用于滚动高亮
+        this.headings = Array.from(headings);
+        
         // 生成目录HTML，传入最小级别
         this.renderTOCItems(tocItems, minLevel);
         
@@ -1598,6 +1601,74 @@ class TOCController {
         
         // 绑定折叠图标点击事件
         this.bindToggleIconEvents();
+        
+        // 绑定滚动事件，实现自动高亮
+        this.bindScrollHighlight();
+    }
+    
+    // 绑定滚动事件，实现自动高亮当前位置
+    bindScrollHighlight() {
+        const contentWithToc = document.querySelector('.content-with-toc');
+        if (!contentWithToc) return;
+        
+        // 节流函数，避免频繁触发
+        let scrollTimeout;
+        contentWithToc.addEventListener('scroll', () => {
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            
+            scrollTimeout = setTimeout(() => {
+                this.updateActiveHeading();
+            }, 50); // 50ms延迟
+        });
+        
+        // 初始化时也执行一次
+        setTimeout(() => {
+            this.updateActiveHeading();
+        }, 100);
+    }
+    
+    // 更新当前激活的标题
+    updateActiveHeading() {
+        if (!this.headings || this.headings.length === 0) return;
+        
+        const contentWithToc = document.querySelector('.content-with-toc');
+        if (!contentWithToc) return;
+        
+        const scrollTop = contentWithToc.scrollTop;
+        const offset = 200; // 偏移量，提前高亮
+        
+        // 找到当前可视区域的标题
+        let currentHeading = null;
+        
+        for (let i = this.headings.length - 1; i >= 0; i--) {
+            const heading = this.headings[i];
+            const headingTop = heading.offsetTop;
+            
+            if (scrollTop + offset >= headingTop) {
+                currentHeading = heading;
+                break;
+            }
+        }
+        
+        // 如果没有找到，使用第一个标题
+        if (!currentHeading && this.headings.length > 0) {
+            currentHeading = this.headings[0];
+        }
+        
+        // 移除所有active类
+        const allTocItems = this.tocBody.querySelectorAll('.toc-item');
+        allTocItems.forEach(item => item.classList.remove('active'));
+        
+        // 给当前标题对应的目录项添加active类
+        if (currentHeading) {
+            const targetId = currentHeading.id;
+            const activeTocItem = this.tocBody.querySelector(`[data-target-id="${targetId}"]`);
+            if (activeTocItem) {
+                activeTocItem.classList.add('active');
+            }
+        }
     }
     
     // 渲染目录项
