@@ -287,6 +287,11 @@ body.small-font span.katex-display {
   font-size: 14px;
   line-height: 21px;
 }
+/* 为行内 KaTeX 公式添加左右间距 */
+span.katex {
+  margin-left: 0.2em;
+  margin-right: 0.2em;
+}
 h1 {
   font-size: 30px;
   line-height: 39px;
