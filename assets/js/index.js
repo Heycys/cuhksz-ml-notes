@@ -799,6 +799,9 @@ class NotebookLoader {
         if (!this.contentContainer) return;
         this.contentContainer.innerHTML = content;
 
+        // 执行内容中的 script 标签（用于 giscus 等）
+        this.executeScripts(this.contentContainer);
+
         // 为新加载的图片添加点击事件
         this.bindImageClickEvents();
 
@@ -821,6 +824,34 @@ class NotebookLoader {
         if (contentWithToc) {
             contentWithToc.scrollTop = 0;
         }
+    }
+    
+    // 执行容器中的所有 script 标签
+    executeScripts(container) {
+        if (!container) return;
+        
+        // 查找所有 script 标签
+        const scripts = container.querySelectorAll('script');
+        
+        scripts.forEach(oldScript => {
+            // 创建新的 script 元素
+            const newScript = document.createElement('script');
+            
+            // 复制所有属性
+            Array.from(oldScript.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+            
+            // 复制脚本内容（如果有）
+            if (oldScript.textContent) {
+                newScript.textContent = oldScript.textContent;
+            }
+            
+            // 替换旧的 script 标签
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+            
+            console.log('已执行脚本:', newScript.src || '内联脚本');
+        });
     }
     
     // 更新浏览器标签页图标
@@ -1566,6 +1597,11 @@ class TOCController {
             if (!heading.id) {
                 heading.id = `heading-${index}`;
             }
+            
+            // 给评论区标题添加特殊类名
+            if (heading.classList.contains('giscus-comments-title')) {
+                heading.classList.add('giscus-toc-item');
+            }
         });
         
         // 构建目录结构
@@ -1682,6 +1718,11 @@ class TOCController {
             tocItem.className = `toc-item h${item.level}`;
             tocItem.dataset.targetId = item.id;
             tocItem.dataset.level = item.level;
+            
+            // 如果是评论区标题，添加特殊类名
+            if (item.element.classList.contains('giscus-comments-title')) {
+                tocItem.classList.add('giscus-toc-item');
+            }
             
             // 判断是否有子项
             const hasChildren = this.hasChildItems(items, index);
@@ -1991,6 +2032,9 @@ class MoreMenuController {
         // 小字号模式状态（默认关闭）
         this.isSmallFont = false;
         
+        // 评论区显示状态（默认开启）
+        this.isCommentsVisible = true;
+        
         // 字数统计元素
         this.wordCountElement = document.getElementById('wordCount');
         
@@ -2005,6 +2049,7 @@ class MoreMenuController {
         this.bindEvents();
         this.initFullWidth();
         this.initSmallFont();
+        this.initComments();
     }
     
     // 初始化全宽状态
@@ -2018,6 +2063,15 @@ class MoreMenuController {
     initSmallFont() {
         if (this.isSmallFont) {
             document.body.classList.add('small-font');
+        }
+    }
+    
+    // 初始化评论区状态
+    initComments() {
+        if (this.isCommentsVisible) {
+            document.body.classList.add('comments-visible');
+        } else {
+            document.body.classList.remove('comments-visible');
         }
     }
     
@@ -2067,6 +2121,9 @@ class MoreMenuController {
                     } else if (labelText === '小字号') {
                         // 切换小字号模式
                         this.toggleSmallFont();
+                    } else if (labelText === '评论区') {
+                        // 切换评论区显示/隐藏
+                        this.toggleComments();
                     }
                 }
             }
@@ -2126,6 +2183,19 @@ class MoreMenuController {
         }
         
         console.log('小字号模式:', this.isSmallFont ? '开启' : '关闭');
+    }
+    
+    // 切换评论区显示
+    toggleComments() {
+        this.isCommentsVisible = !this.isCommentsVisible;
+        
+        if (this.isCommentsVisible) {
+            document.body.classList.add('comments-visible');
+        } else {
+            document.body.classList.remove('comments-visible');
+        }
+        
+        console.log('评论区:', this.isCommentsVisible ? '显示' : '隐藏');
     }
     
     // 更新字数统计

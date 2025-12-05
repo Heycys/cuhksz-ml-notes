@@ -1279,4 +1279,58 @@ body.full-width .content-wrapper header > div.title {
   flex: 1;
 }
 
+/* ==================== giscus 评论区样式 ==================== */
+
+/* 评论区容器 - 默认显示 */
+.giscus-comments-section {
+  max-width: 900px;
+  margin: 60px auto 40px;
+  padding: 0 20px;
+  transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+}
+
+/* 评论区标题 */
+.giscus-comments-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+/* 评论区内容容器 */
+.giscus-comments-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  min-height: 200px; /* 确保有最小高度 */
+}
+
+/* 当评论区开关关闭时隐藏评论区 */
+body:not(.comments-visible) .giscus-comments-section {
+  display: none !important;
+}
+
+/* 当评论区开关关闭时，同时隐藏目录中的评论区条目 */
+body:not(.comments-visible) .giscus-toc-item {
+  display: none !important;
+}
+
+/* 响应式设计 - 移动端 */
+@media (max-width: 768px) {
+  .giscus-comments-section {
+    margin: 40px auto 20px;
+    padding: 0 15px;
+  }
+  
+  .giscus-comments-title {
+    font-size: 20px;
+  }
+  
+  .giscus-comments-container {
+    padding: 15px;
+  }
+}
+
 
