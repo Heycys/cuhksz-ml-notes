@@ -1136,6 +1136,9 @@ class NotebookLoader {
             this.breadcrumbIcon.textContent = displayIcon;
         }
         
+        // 更新浏览器标签页标题（用于 giscus 的 title 映射）
+        document.title = `${notebookName}`;
+        
         console.log('面包屑已更新:', notebookName);
     }
     
