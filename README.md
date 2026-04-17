@@ -6,6 +6,12 @@
 
 希望这份笔记对你的学习有所帮助！内容可能存在错误或疏漏，欢迎大家在评论区里反馈🎉
 
+**笔记界面预览**
+
+<p align="center">
+  <img width="700" src="assets/image/preview.png">
+</p>
+
 **主要参考来源**
 
 - Xiao Li. **DDA5001 Machine Learning：课程讲义**\[Z/OL]. 2025 秋季学期. 可得自:[https://www.xiao-li.org/teaching/](https://www.xiao-li.org/teaching/?utm_source=chatgpt.com "https://www.xiao-li.org/teaching/")
@@ -13,7 +19,7 @@
 - 姜伟生. **机器学习：全彩图解 + 微课 + Python编程**\[M]. 北京：清华大学出版社，2024.
 - Google. **Gemini**\[EB/OL]. 可得自:[https://gemini.google.com/](https://gemini.google.com/?utm_source=chatgpt.com "https://gemini.google.com/")
 
-本文档中的部分图片来源于课程讲义、教材、开源资料及网络公开页面。笔者已尽力核实并标注来源，个别图片可能未能准确追溯原始出处。
+> 本文档中的部分图片来源于课程讲义、教材、开源资料及网络公开页面。笔者已尽力核实并标注来源，个别图片可能未能准确追溯原始出处。
 
 ## 目录
 
@@ -66,7 +72,7 @@ $$
 **几何规律**：一个完美的分类器是怎样的？假设下图呈现的是一个完美的分类器，我们可以发现一个几何规律，对于 **正类样本**，与 $\boldsymbol{\theta}$ 的夹角是锐角；对于 **负类样本**，则与 $\boldsymbol{\theta}$ 的夹角是钝角。
 
 <p align="center">
-  <img width="500" src="assets/image/image_nrT0DENA5M.png">
+  <img width="400" src="assets/image/image_nrT0DENA5M.png">
 </p>
 
 基于这个几何规律，我们希望通过不断调整 $\boldsymbol{\theta}$ 的方向，使其满足以下几何关系：
@@ -88,27 +94,27 @@ $$
 以下图为例，有3个数据点，从假设空间 $\mathcal{H}$ 中取出一个特定的模型 $f\_1$ ，将它应用到这3个点上，得到一个由 $+1$ 和 $-1$ 组成的3元组 $\\{+1,+1,-1\\}$ ，再取出一个特定的模型 $f\_2$ ，应用后得到一个二分法 $\\{-1,-1,+1\\}$ ，同理，取出 $f\_3$ 也得到了一个二分法 $\\{+1,+1,+1\\}$ 。
 
 <p align="center">
-  <img width="500" src="assets/image/image_YuWw3yyOp-.png">
+  <img width="200" src="assets/image/image_YuWw3yyOp-.png">
 </p>
 
 对于3个数据点，一共有8种可能的标记方式。当 $\mathcal{H}$ 强大到能实现这8种二分法，我们就说 $\mathcal{H}$ **打散 (shatter)** 了这3个数据点。
 
 <p align="center">
-  <img width="500" src="assets/image/image_BQ6fmJjKqM.png">
+  <img width="700" src="assets/image/image_BQ6fmJjKqM.png">
 </p>
 
 #### 梯度下降 章节片段
 
 <p align="center">
-  <img width="600" src="assets/image/PixPin_2025-10-04_22-31-39_lYwskNxuve.gif">
+  <img width="700" src="assets/image/PixPin_2025-10-04_22-31-39_lYwskNxuve.gif">
 </p>
 
 - **普通梯度下降 (红线) - "目光短浅的步行者"**：
   从起点出发后，只移动了非常短的距离就几乎停滞不前，完全没有能力探索到远处的更优点（蓝色深谷）。
 
-  ```math
-  \boldsymbol{\theta}_{k+1}=\boldsymbol{\theta}_k-\mu_k\nabla\mathcal{L}(\boldsymbol{\theta}_k)
-  ```
+$$
+\boldsymbol{\theta}_{k+1}=\boldsymbol{\theta}_k-\mu_k\nabla\mathcal{L}(\boldsymbol{\theta}_k)
+$$
 
   它的每一步都完全由当前位置的梯度 $\nabla\mathcal{L}(\boldsymbol{\theta}\_k)$ 决定。因此，走了几步之后，它迅速陷入了一个梯度几乎为零的"平原"或局部极小点。由于没有其他力量的推动，梯度一旦消失，它就失去了前进的动力，因此被困住了。
 
@@ -116,9 +122,9 @@ $$
 - **带动量梯度下降 (蓝线) - "鲁莽的重型卡车"**：
   成功冲出了起点的平缓区，加速冲向了蓝色深谷的最低点。但在巨大的惯性作用下，它始终无法稳定下来，而是在谷底附近大幅度地来回震荡、绕圈。
 
-  ```math
-  \boldsymbol{\theta}_{k+1}=\boldsymbol{\theta}_k-\mu_k\nabla\mathcal{L}(\boldsymbol{\theta}_k)+\beta_k(\boldsymbol{\theta}_k-\boldsymbol{\theta}_{k-1})
-  ```
+$$
+\boldsymbol{\theta}_{k+1}=\boldsymbol{\theta}_k-\mu_k\nabla\mathcal{L}(\boldsymbol{\theta}_k)+\beta_k(\boldsymbol{\theta}_k-\boldsymbol{\theta}_{k-1})
+$$
 
   其更新方向是当前梯度和上一步移动向量（即动量）的加权和。起点附近，即使梯度小，但只要开始移动，动量项 $\beta\_k(\boldsymbol{\theta}\_k-\boldsymbol{\theta}\_{k-1})$ 就会"记住"之前的移动，推着它继续前进，从而成功穿越平地区域。
 
@@ -126,12 +132,12 @@ $$
 - **Nesterov 加速梯度下降 (绿线) - "会预判的赛车手"**：
   和动量法一样，它也成功地冲出了起点。但它在接近最低点时，过冲的幅度明显更小，震荡也更轻微，最终能更快、更稳定地收敛到最低点附近。
 
-  ```math
-  \begin{aligned}
-  &\boldsymbol{w}_k=\boldsymbol{\theta}_k+\beta_k(\boldsymbol{\theta}_k-\boldsymbol{\theta}_{k-1})
-  \\ &\boldsymbol{\theta}_{k+1}=\boldsymbol{w}_k-\mu_k\nabla\mathcal{L}(\boldsymbol{w}_k)
-  \end{aligned}
-  ```
+$$
+\begin{aligned}
+&\boldsymbol{w}_k=\boldsymbol{\theta}_k+\beta_k(\boldsymbol{\theta}_k-\boldsymbol{\theta}_{k-1})
+\\ &\boldsymbol{\theta}_{k+1}=\boldsymbol{w}_k-\mu_k\nabla\mathcal{L}(\boldsymbol{w}_k)
+\end{aligned}
+$$
 
   Nesterov的核心优势在于它的 **"前瞻性"**。它是在一个由动量预测的"未来位置" $\boldsymbol{w}\_k$ 上计算梯度。即它会先"想象"自己按动量冲一步后的位置 $\boldsymbol{w}\_k$ （这个位置已经在对面的山坡上了）。它在那个"未来"的山坡上感受坡度，发现了一个指向谷底的、强烈的反向梯度。这个强烈的"刹车"信号被用来修正最终的移动方向。
 
@@ -149,11 +155,11 @@ $$
 下面的动画展示了随着正则化参数 $\lambda$ 不断增大，最优解（**黄色X**）位置的变化。左图对应 **L2正则化**，右图对应 **L1正则化**。
 
 <p align="center">
-  <img width="500" src="assets/image/PixPin_2025-10-20_21-57-44_5DEtj92IB1.gif">
+  <img width="200" src="assets/image/PixPin_2025-10-20_21-57-44_5DEtj92IB1.gif">
 </p>
 
 <p align="center">
-  <img width="500" src="assets/image/PixPin_2025-10-20_22-00-19_lZdKeXxmuK.gif">
+  <img width="200" src="assets/image/PixPin_2025-10-20_22-00-19_lZdKeXxmuK.gif">
 </p>
 
 因此，从函数叠加的视角看，L2正则化像一个光滑的引力场，将解均匀地拉向原点，实现 **参数收缩**；而L1正则化则像一个带有特定路径（坐标轴上的"山谷"）的引力场，倾向于将解"拽"到坐标轴上，从而实现 **稀疏化和特征选择**。
@@ -163,13 +169,13 @@ $$
 一个合格的超平面可以有无数个，但我们的目标是找到 **最好** 的那一个。SVM认为，最好的超平面是那个能为两类数据点提供最大"缓冲地带"的平面。这个缓冲地带就叫做 **间隔 (Margin)**。
 
 <p align="center">
-  <img width="500" src="assets/image/image_smLD4ySrh3.png">
+  <img width="300" src="assets/image/image_smLD4ySrh3.png">
 </p>
 
 如图所示，间隔是由两条平行于决策边界的虚线所界定的区域。而这两条虚线，恰好穿过了距离决策边界最近的那些数据点。这些最靠近决策边界、并"支撑"起整个间隔区域的关键数据点，被称为 **支持向量 (Support Vectors)**。例如，下图中被黑色圆圈住的数据点，它们是整个模型构建中最核心的样本。
 
 <p align="center">
-  <img width="500" src="assets/image/image_F_p_7EO9eS.png">
+  <img width="300" src="assets/image/image_F_p_7EO9eS.png">
 </p>
 
 #### 核方法 章节片段
@@ -210,7 +216,7 @@ $$
 我们可以在直线 $U$ 上选择无数个"候选重建点" $\tilde{\boldsymbol{x}}$ 。它代表了我们"压扁" $\boldsymbol{x}$ 后的一种可能性。
 
 <p align="center">
-  <img width="500" src="assets/image/20200216202613847_-DURNI8UIZ.gif">
+  <img width="400" src="assets/image/20200216202613847_-DURNI8UIZ.gif">
 </p>
 
 #### 聚类 章节片段
@@ -239,7 +245,7 @@ $$
 将整个计算过程用图片表示：
 
 <p align="center">
-  <img width="600" src="assets/image/image_BGHzA8D7i9.png">
+  <img width="500" src="assets/image/image_BGHzA8D7i9.png">
 </p>
 
 现在我们来看每一个神经元（节点）的计算过程：
@@ -268,7 +274,7 @@ f_{\boldsymbol{\theta}}(\boldsymbol{x}) = h\left(\boldsymbol{W}^L \sigma\left(\b
 $$
 
 <p align="center">
-  <img width="600" src="assets/image/image_FhwhuQLf9E.png">
+  <img width="500" src="assets/image/image_FhwhuQLf9E.png">
 </p>
 
 我们可以把这个过程的矩阵表示进一步展开：
@@ -302,9 +308,9 @@ $$
    - **D. 反向传播：** 计算这个批次的 **平均梯度** $\boldsymbol{g}\_k = \frac{1}{|\mathcal{B}\_k|} \sum\_{i \in \mathcal{B}\_k} \nabla \ell\_i(\boldsymbol{\theta}\_k)$ 。
    - **E. 参数更新：** 执行 **一次迭代**，更新模型参数：
 
-     ```math
-     \boldsymbol{\theta}_{k+1} \leftarrow \boldsymbol{\theta}_k - \mu_k \boldsymbol{g}_k
-     ```
+$$
+\boldsymbol{\theta}_{k+1} \leftarrow \boldsymbol{\theta}_k - \mu_k \boldsymbol{g}_k
+$$
 5. **一轮 (Epoch) 结束**
 
    当内循环（步骤4）完成 $N\_b=7813$ 次迭代后，模型已经看完了所有数据一次，一个Epoch结束。此时，模型的参数已经被更新了7813次。
@@ -399,7 +405,7 @@ $$
 
 $$
 \begin{array}{rcccc}
-\text{Input } \boldsymbol{X}: & \texttt{<start>} & \texttt{I} & \texttt{love} & \texttt{CUHKSZ} \\
+\text{Input } \boldsymbol{X}: & \texttt{(start)} & \texttt{I} & \texttt{love} & \texttt{CUHKSZ} \\
 & \downarrow & \downarrow & \downarrow & \downarrow & \text{(Decoder)}\\
 \text{Hidden State } \boldsymbol{Z}: & \boldsymbol{z}_1 & \boldsymbol{z}_2 & \boldsymbol{z}_3 & \boldsymbol{z}_4 \\
 & \downarrow  & \downarrow & \downarrow & \downarrow & \text{(LM Head + Softmax)}\\
@@ -421,7 +427,7 @@ $$
 这就是所谓的 **Next-Token Prediction**。Transformer通过这种方式，在一次前向传播中并行地计算了序列中所有位置的下一个词的概率。
 
 <p align="center">
-  <img width="600" src="assets/image/image_Au6BpRMBPN.png">
+  <img width="400" src="assets/image/image_Au6BpRMBPN.png">
 </p>
 
 #### 大语言模型II 章节片段
